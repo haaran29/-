@@ -153,9 +153,9 @@ summary{cursor:pointer;font-weight:700}
       <p class="status" id="status" role="status"></p>
       <div class="howto" id="howto">
         <p class="howto-title">印刷のしかた（保存したあと）</p>
-        <p><b>iPhone</b>：保存したPDFを開く → 共有ボタン（□に↑）→「プリント」→ 複合機を選んで「プリント」</p>
-        <p class="sub">Safariの場合は、アドレスバーの「↓」→ 保存したPDFをタップすると開きます。</p>
-        <p><b>Android</b>：画面上の通知、または「ファイル」アプリの「ダウンロード」から PDFを開く →「︙」→「印刷」</p>
+        <p data-os="ios"><b>iPhone</b>：保存したPDFを開く → 共有ボタン（□に↑）→「プリント」→ 複合機を選んで「プリント」</p>
+        <p class="sub" data-os="ios">Safariの場合は、アドレスバーの「↓」→ 保存したPDFをタップすると開きます。</p>
+        <p data-os="android"><b>Android</b>：画面上の通知、または「ファイル」アプリの「ダウンロード」から PDFを開く →「︙」→「印刷」</p>
       </div>
       <p class="hint">綴じしろとして上は3cm、左は2.5cm空けてあります。</p>
     </div>
@@ -165,7 +165,7 @@ summary{cursor:pointer;font-weight:700}
     <canvas id="sheet" width="827" height="1169" aria-label="A4用紙のプレビュー"></canvas>
     <p class="cap">点線は綴じしろの目安です（保存したものには出ません）</p>
     <div class="result" id="result" hidden>
-      <p class="cap">保存できない場合は、下の画像を長押しして「写真に保存」してください。</p>
+      <p class="cap" id="resultCap"></p>
       <img id="resultImg" alt="できあがったA4台紙">
     </div>
   </section>
@@ -352,8 +352,18 @@ function readFile(f){
 }
 
 let tmp=null, drag=null;
-function openCrop(){tmp={...crop}; $('crop').hidden=false; document.body.style.overflow='hidden'; requestAnimationFrame(drawCrop);}
-function closeCrop(){$('crop').hidden=true; document.body.style.overflow='';}
+/* 切り取り中にスマホの「戻る」操作をしたら、切り取り画面だけを閉じる */
+let cropHist=false;
+function openCrop(){
+  tmp={...crop}; $('crop').hidden=false; document.body.style.overflow='hidden'; requestAnimationFrame(drawCrop);
+  try{ history.pushState({crop:1},''); cropHist=true; }catch(e){ cropHist=false; }
+}
+function closeCrop(byBack){
+  $('crop').hidden=true; document.body.style.overflow='';
+  if(cropHist && !byBack){ try{ history.back(); }catch(e){} }
+  cropHist=false;
+}
+window.addEventListener('popstate',()=>{ if(cropHist && !$('crop').hidden){ cropHist=false; closeCrop(true); applyCrop(); } });
 function drawCrop(){
   const r=rotated(), cv=$('ccv'), st=$('stage');
   const k=Math.min(st.clientWidth/r.width, st.clientHeight/r.height);
@@ -399,6 +409,17 @@ $('rotL').onclick=()=>{rot=(rot+270)%360; crop=rotFrac(crop,-1); applyCrop();};
 $('rotR').onclick=()=>{rot=(rot+90)%360; crop=rotFrac(crop,1); applyCrop();};
 ['date','paper','dfmt','font','vpos','size','memoSize','memoText'].forEach(k=>$(k).addEventListener('input',update));
 
+/* ---- 機種ごとの案内（iPhone / Android） ---- */
+const UA=navigator.userAgent;
+const OS=/Android/i.test(UA) ? 'android'
+  : (/iPhone|iPad|iPod/i.test(UA) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1)) ? 'ios' : '';
+const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像をダウンロード」を押してください。'
+  : OS==='ios' ? '下の画像を長押しして「"写真"に保存」を押してください。'
+  : '下の画像を長押し（パソコンは右クリック）して保存してください。';
+$('resultCap').textContent='保存できない場合は、'+LONGPRESS;
+// スマホでは、自分の機種の印刷手順だけを出す
+if(OS) document.querySelectorAll('#howto [data-os]').forEach(el=>{ el.hidden = el.dataset.os!==OS; });
+
 /* ---- 保存 ---- */
 const dlPromise=(async()=>{ try{ return window.claude ? await window.claude.use('downloads') : null; }catch(e){ return null; } })();
 
@@ -426,7 +447,7 @@ async function save(kind){
   // 長押し保存用にも出しておく
   $('resultImg').src=c.toDataURL('image/jpeg',0.85);
   const downloads=await dlPromise;
-  if(!downloads){ $('result').hidden=false; status('この画面では直接保存できません。下の画像を長押しして保存してください。'); return; }
+  if(!downloads){ $('result').hidden=false; status('この画面では直接保存できません。'+LONGPRESS); return; }
   try{
     await downloads.save({filename:name, data:blob});
     status('保存しました：'+name+'　→ 下の手順で印刷してください');
@@ -434,7 +455,7 @@ async function save(kind){
   }catch(err){
     if(err && err.code==='declined') status('保存をやめました。');
     else if(err && err.code==='rate_limited') status('少し待ってから、もう一度押してください。',true);
-    else { $('result').hidden=false; status('うまく保存できませんでした。下の画像を長押しして保存してください。',true); }
+    else { $('result').hidden=false; status('うまく保存できませんでした。'+LONGPRESS,true); }
   }
 }
 $('savePdf').onclick=()=>save('pdf');
