@@ -36,6 +36,9 @@ input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visibl
 .drop.need{border-color:#c0392b;border-style:solid}
 .drop strong{color:var(--accent)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
+/* プレビューの下に、写真の直し用ボタンを横一列で並べる */
+.img-tools{width:100%;max-width:560px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.img-tools button{padding:12px 4px;font-weight:700;line-height:1.3}
 button{font:inherit;font-size:15px;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 button:hover{background:var(--soft)}
 button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:18px;font-weight:700;padding:14px;width:100%}
@@ -121,11 +124,6 @@ summary{cursor:pointer;font-weight:700}
         <strong>ここをタップ</strong>して写真を撮る・選ぶ<br>（パソコンはドラッグ＆ドロップも可）
       </div>
       <input type="file" id="file" accept="image/*" hidden>
-      <div class="row" id="imgTools" hidden>
-        <button type="button" id="cropBtn">✂ 切り取り直す</button>
-        <button type="button" id="rotL">↺ 左に回す</button>
-        <button type="button" id="rotR">↻ 右に回す</button>
-      </div>
     </div>
 
     <details>
@@ -166,6 +164,11 @@ summary{cursor:pointer;font-weight:700}
 
   <section class="preview" aria-label="プレビュー">
     <canvas id="sheet" width="827" height="1169" aria-label="A4用紙のプレビュー"></canvas>
+    <div class="row img-tools" id="imgTools" hidden>
+      <button type="button" id="cropBtn">✂ 切り取り直す</button>
+      <button type="button" id="rotL">↺ 左に回す</button>
+      <button type="button" id="rotR">↻ 右に回す</button>
+    </div>
     <p class="cap">点線は綴じしろの目安です（印刷・保存したものには出ません）</p>
     <div class="save" id="saveArea">
       <button type="button" class="primary" id="printBtn">印刷する</button>
