@@ -1,0 +1,447 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>新聞切り抜き台紙メーカー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* 入力パネル（左/上）と A4 プレビュー（右/下）。出来上がりはPDF・画像で保存して印刷 */
+:root{
+  --ground:#e8ecef; --panel:#ffffff; --ink:#1f2a33; --muted:#5b6974;
+  --line:#cbd3da; --accent:#1d5c8f; --accent-ink:#ffffff; --soft:#f4f7f9; --focus:#8bb8de;
+  --hand:"Klee One","Hiragino Maru Gothic ProN","Yu Gothic",cursive;
+  --ui:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#151b20; --panel:#1f272e; --ink:#e6ecf0; --muted:#9aa8b3;
+  --line:#3a4651; --accent:#5b9bd0; --accent-ink:#0d1a24; --soft:#26303a; --focus:#5b9bd0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ground:#151b20; --panel:#1f272e; --ink:#e6ecf0; --muted:#9aa8b3;
+  --line:#3a4651; --accent:#5b9bd0; --accent-ink:#0d1a24; --soft:#26303a; --focus:#5b9bd0; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.6}
+.app{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:24px;padding-block:24px;padding-inline:24px;max-width:1150px;margin:0 auto}
+@media (max-width:820px){.app{grid-template-columns:1fr;padding-inline:16px;padding-block:16px}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:18px;align-self:start;min-width:0}
+h1{font-size:20px;margin:0;text-wrap:balance}
+.lead{margin:-10px 0 0;color:var(--muted);font-size:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.label{font-weight:700;font-size:15px}
+.step{display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:13px;text-align:center;line-height:22px;margin-right:6px}
+textarea{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:100%;resize:vertical;line-height:1.5}
+textarea:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+input[type=date],input[type=text],select{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:var(--soft)}
+.drop.over{border-color:var(--accent)}
+.drop strong{color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-size:15px;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{background:var(--soft)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:18px;font-weight:700;padding:14px;width:100%}
+button.primary:hover{filter:brightness(1.08);background:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{padding:4px 10px;font-size:13px;border-radius:999px}
+.weekday{font-size:14px;color:var(--muted)}
+input[type=range]{width:100%}
+summary{cursor:pointer;font-weight:700}
+.adv{display:flex;flex-direction:column;gap:14px;margin-top:12px}
+.save{display:flex;flex-direction:column;gap:8px}
+.howto{border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.howto p{margin:0}
+.howto .howto-title{font-weight:700}
+.howto .sub{color:var(--muted);font-size:13px}
+.howto.flash{border-color:var(--accent);border-width:2px}
+.status{font-size:14px;margin:0;color:var(--muted);min-height:1.4em}
+.status.err{color:#c0392b}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.preview{min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px}
+#sheet{width:100%;max-width:560px;height:auto;aspect-ratio:210/297;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.2);display:block}
+.cap{font-size:13px;color:var(--muted);margin:0}
+.result{width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.result img{width:100%;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+/* 切り取り画面（常に暗い背景） */
+.crop{position:fixed;inset:0;z-index:50;background:#14191e;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);gap:10px}
+.crop-head{color:#fff;font-size:15px;text-align:center}
+.crop-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.crop-box{position:relative;line-height:0}
+.crop-box canvas{display:block}
+.crop-rect{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);touch-action:none;cursor:move}
+.handle{position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;touch-action:none}
+.handle::after{content:"";position:absolute;left:10px;top:10px;width:20px;height:20px;background:#fff;border:2px solid #1d5c8f;border-radius:50%}
+.h-nw{left:0;top:0}.h-ne{left:100%;top:0}.h-sw{left:0;top:100%}.h-se{left:100%;top:100%}
+.crop-btns{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px}
+.crop-btns button{font-size:16px;padding:12px 6px;background:#2a333b;color:#fff;border-color:#46525c}
+.crop-btns .ok{background:#1d5c8f;border-color:#1d5c8f;font-weight:700}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <section class="panel" aria-label="入力">
+    <h1>新聞切り抜き台紙メーカー</h1>
+    <p class="lead">3つ入れて保存するだけ。A4用紙に記事と日付・新聞名が入ります。</p>
+
+    <div class="field">
+      <label for="date"><span class="step">1</span>日付</label>
+      <input type="date" id="date">
+      <span class="weekday" id="wd"></span>
+    </div>
+
+    <div class="field">
+      <label for="paper"><span class="step">2</span>新聞名</label>
+      <input type="text" id="paper" value="中日新聞">
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="field">
+      <span class="label"><span class="step">3</span>記事の写真</span>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="写真を撮る・選ぶ">
+        <strong>ここをタップ</strong>して写真を撮る・選ぶ<br>（パソコンはドラッグ＆ドロップも可）
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="row" id="imgTools" hidden>
+        <button type="button" id="cropBtn">✂ 切り取り直す</button>
+        <button type="button" id="rotL">↺ 左に回す</button>
+        <button type="button" id="rotR">↻ 右に回す</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="memoText"><span class="step">4</span>メモ（書かなくてもOK）</label>
+      <textarea id="memoText" rows="3" placeholder="例：仕入れ価格への影響に注意"></textarea>
+      <span class="weekday" id="memoInfo"></span>
+    </div>
+
+    <details>
+      <summary>細かい調整</summary>
+      <div class="adv">
+        <div class="field">
+          <label for="memoSize">メモ欄</label>
+          <select id="memoSize">
+            <option value="40">ふつう（4cm）</option>
+            <option value="60">広め（6cm）</option>
+            <option value="25">小さめ（2.5cm）</option>
+            <option value="0">なし</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dfmt">日付の書き方</label>
+          <select id="dfmt">
+            <option value="kanji">2026年10月2日（金）</option>
+            <option value="dot">2026.10.2(金)</option>
+            <option value="wareki">令和8年10月2日(金)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="size">記事の大きさ <span id="sizeVal"></span></label>
+          <input type="range" id="size" min="40" max="100" value="100">
+        </div>
+        <div class="field">
+          <label for="vpos">記事の位置（上下）</label>
+          <select id="vpos"><option value="top">上寄せ</option><option value="center">中央</option></select>
+        </div>
+        <div class="field">
+          <label for="font">文字の書体</label>
+          <select id="font"><option value="hand">手書き風</option><option value="gothic">ゴシック</option></select>
+        </div>
+      </div>
+    </details>
+
+    <div class="save">
+      <button type="button" class="primary" id="savePdf">PDFを保存（印刷用）</button>
+      <button type="button" id="saveJpg">画像（JPG）で保存</button>
+      <p class="status" id="status" role="status"></p>
+      <div class="howto" id="howto">
+        <p class="howto-title">印刷のしかた（保存したあと）</p>
+        <p><b>iPhone</b>：保存したPDFを開く → 共有ボタン（□に↑）→「プリント」→ 複合機を選んで「プリント」</p>
+        <p class="sub">Safariの場合は、アドレスバーの「↓」→ 保存したPDFをタップすると開きます。</p>
+        <p><b>Android</b>：画面上の通知、または「ファイル」アプリの「ダウンロード」から PDFを開く →「︙」→「印刷」</p>
+      </div>
+      <p class="hint">綴じしろとして上は3cm、左は2.5cm空けてあります。</p>
+    </div>
+  </section>
+
+  <section class="preview" aria-label="プレビュー">
+    <canvas id="sheet" width="827" height="1169" aria-label="A4用紙のプレビュー"></canvas>
+    <p class="cap">点線は綴じしろの目安です（保存したものには出ません）</p>
+    <div class="result" id="result" hidden>
+      <p class="cap">保存できない場合は、下の画像を長押しして「写真に保存」してください。</p>
+      <img id="resultImg" alt="できあがったA4台紙">
+    </div>
+  </section>
+</div>
+
+<div class="crop" id="crop" hidden>
+  <div class="crop-head">白い丸を指で動かして、記事だけを囲んでください</div>
+  <div class="crop-stage" id="stage">
+    <div class="crop-box">
+      <canvas id="ccv"></canvas>
+      <div class="crop-rect" id="crect">
+        <div class="handle h-nw" data-h="nw"></div><div class="handle h-ne" data-h="ne"></div>
+        <div class="handle h-sw" data-h="sw"></div><div class="handle h-se" data-h="se"></div>
+      </div>
+    </div>
+  </div>
+  <div class="crop-btns">
+    <button type="button" id="cCancel">やめる</button>
+    <button type="button" id="cRot">↻ 回す</button>
+    <button type="button" class="ok" id="cOk">これで決定</button>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const WD=['日','月','火','水','木','金','土'];
+const KEYS=['paper','dfmt','font','vpos','size','memoSize'];
+let srcImg=null, rot=0, crop={x:0,y:0,w:1,h:1}, clipCanvas=null;
+
+function store(k,v){try{localStorage.setItem('clip_'+k,v)}catch(e){}}
+function load(k){try{return localStorage.getItem('clip_'+k)}catch(e){return null}}
+function status(msg,err){$('status').textContent=msg; $('status').classList.toggle('err',!!err);}
+
+const t=new Date();
+$('date').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+KEYS.forEach(k=>{const v=load(k); if(v){const el=$(k); el.value=v; if(el.tagName==='SELECT'&&el.selectedIndex<0) el.selectedIndex=0;}});
+['中日新聞','中日新聞（夕刊）','日本経済新聞'].forEach(n=>{
+  const b=document.createElement('button'); b.type='button'; b.textContent=n;
+  b.onclick=()=>{$('paper').value=n; update();}; $('chips').appendChild(b);
+});
+
+function dateParts(){
+  const v=$('date').value; if(!v) return null;
+  const [y,m,d]=v.split('-').map(Number);
+  return {y,m,d,w:WD[new Date(y,m-1,d).getDay()]};
+}
+function caption(){
+  const p=dateParts(); let s='';
+  if(p){
+    const f=$('dfmt').value;
+    if(f==='kanji') s=`${p.y}年${p.m}月${p.d}日（${p.w}）`;
+    else if(f==='wareki'){const r=p.y-2018; s=`令和${r===1?'元':r}年${p.m}月${p.d}日(${p.w})`;}
+    else s=`${p.y}.${p.m}.${p.d}(${p.w})`;
+  }
+  return (s+'　'+$('paper').value.trim()).trim();
+}
+
+/* ---- A4 を描く（mm 単位でレイアウト） ---- */
+function drawSheet(cv, dpi, preview){
+  const k=dpi/25.4, mm=v=>v*k;
+  cv.width=Math.round(mm(210)); cv.height=Math.round(mm(297));
+  const g=cv.getContext('2d');
+  g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height);
+  const L=25,T=30,R=198,B=285,W=R-L;
+  if(preview){
+    g.save(); g.strokeStyle='#bfd0dd'; g.lineWidth=Math.max(1,mm(.3)); g.setLineDash([mm(2),mm(1.5)]);
+    g.beginPath(); g.moveTo(mm(L),0); g.lineTo(mm(L),cv.height); g.moveTo(0,mm(T)); g.lineTo(cv.width,mm(T)); g.stroke();
+    g.setLineDash([]); g.fillStyle='#9fb0bd'; g.font=`${mm(3)}px ${getComputedStyle(document.documentElement).getPropertyValue('--ui')}`;
+    g.textBaseline='top'; g.fillText('綴じしろ',mm(3),mm(3)); g.restore();
+  }
+  const memo=Number($('memoSize').value);
+  const regionB = memo ? B-memo-6 : B;
+  const s=Number($('size').value)/100;
+  const capH=10, gap=5;
+  const maxW=W*s, maxH=(regionB-T-capH-gap)*s;
+  let iw=preview?120:0, ih=preview?150:0;
+  if(clipCanvas){const r=Math.min(maxW/clipCanvas.width, maxH/clipCanvas.height); iw=clipCanvas.width*r; ih=clipCanvas.height*r;}
+  const blockH=capH+gap+ih;
+  const top=$('vpos').value==='top' ? T : T+Math.max(0,(regionB-T-blockH)/2);
+  // 日付・新聞名
+  const hand=$('font').value==='hand';
+  g.fillStyle='#222'; g.textAlign='center'; g.textBaseline='middle';
+  g.font=`${hand?600:700} ${mm(7)}px ${hand?'"Klee One","Hiragino Maru Gothic ProN","Yu Gothic",cursive':'"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif'}`;
+  g.fillText(caption(), mm(L+W/2), mm(top+capH/2), mm(W));
+  // 記事
+  const ix=L+(W-iw)/2, iy=top+capH+gap;
+  if(clipCanvas){ g.imageSmoothingQuality='high'; g.drawImage(clipCanvas,mm(ix),mm(iy),mm(iw),mm(ih)); }
+  else if(preview){
+    g.save(); g.strokeStyle='#b9c2c9'; g.lineWidth=mm(.5); g.setLineDash([mm(3),mm(2)]);
+    g.strokeRect(mm(ix),mm(iy),mm(iw),mm(ih)); g.setLineDash([]);
+    g.fillStyle='#9aa5ae'; g.font=`${mm(5)}px sans-serif`; g.fillText('ここに記事の写真が入ります',mm(ix+iw/2),mm(iy+ih/2)); g.restore();
+  }
+  // メモ欄
+  if(memo){
+    const mt=B-memo;
+    g.strokeStyle='#555'; g.lineWidth=mm(.35);
+    g.beginPath(); g.roundRect ? g.roundRect(mm(L),mm(mt),mm(W),mm(memo),mm(1.5)) : g.rect(mm(L),mm(mt),mm(W),mm(memo)); g.stroke();
+    g.fillStyle='#333'; g.textAlign='left'; g.textBaseline='top';
+    g.font=`700 ${mm(3.6)}px "Zen Kaku Gothic New","Hiragino Sans",sans-serif`;
+    g.fillText('メ モ',mm(L+4),mm(mt+2.5));
+    const fit=drawMemoText(g,mm,$('memoText').value,L+4,mt+8,W-8,memo-10,hand);
+    memoFits=fit;
+  }
+}
+
+/* メモの文字を枠内に折り返して描く。入りきらなければ文字を小さくする */
+let memoFits=true;
+function wrapLines(g,text,maxW){
+  const out=[];
+  text.replace(/\r/g,'').split('\n').forEach(para=>{
+    if(para===''){out.push(''); return;}
+    let line='';
+    for(const ch of para){
+      if(g.measureText(line+ch).width>maxW && line!==''){
+        // 行頭に句読点が来ないようにする
+        if('、。，．）」』！？'.includes(ch)){ line+=ch; continue; }
+        out.push(line); line=ch;
+      } else line+=ch;
+    }
+    out.push(line);
+  });
+  return out;
+}
+function drawMemoText(g,mm,text,x,y,w,h,hand){
+  text=text.trim();
+  if(!text || h<=0) return true;
+  const face=hand?'"Klee One","Hiragino Maru Gothic ProN","Yu Gothic",cursive':'"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
+  let size=5, lines, lh;
+  for(; size>=3; size-=0.25){
+    g.font=`${hand?600:400} ${mm(size)}px ${face}`;
+    lh=size*1.55; lines=wrapLines(g,text,mm(w));
+    if(lines.length*lh<=h) break;
+  }
+  let fits=true;
+  const maxLines=Math.max(1,Math.floor(h/lh));
+  if(lines.length>maxLines){ fits=false; lines=lines.slice(0,maxLines); lines[maxLines-1]=lines[maxLines-1].slice(0,-1)+'…'; }
+  g.fillStyle='#222'; g.textAlign='left'; g.textBaseline='top';
+  lines.forEach((ln,i)=>g.fillText(ln,mm(x),mm(y+i*lh)));
+  return fits;
+}
+
+function update(){
+  $('wd').textContent = dateParts() ? `→ ${dateParts().w}曜日` : '';
+  $('sizeVal').textContent=$('size').value+'%';
+  KEYS.forEach(k=>store(k,$(k).value));
+  memoFits=true;
+  drawSheet($('sheet'),100,true);
+  const hasMemo=$('memoText').value.trim()!=='';
+  if(hasMemo && $('memoSize').value==='0') $('memoInfo').textContent='※「細かい調整」でメモ欄が「なし」になっているので、印刷されません。';
+  else if(hasMemo && !memoFits) $('memoInfo').textContent='※ 文字が多くて入りきりません。短くするか、「細かい調整」でメモ欄を広めにしてください。';
+  else $('memoInfo').textContent='';
+  $('result').hidden=true;
+}
+
+/* ---- 写真：回転と切り取り ---- */
+function rotated(){
+  const c=document.createElement('canvas'), sw=rot%180!==0;
+  c.width=sw?srcImg.height:srcImg.width; c.height=sw?srcImg.width:srcImg.height;
+  const x=c.getContext('2d'); x.translate(c.width/2,c.height/2); x.rotate(rot*Math.PI/180);
+  x.drawImage(srcImg,-srcImg.width/2,-srcImg.height/2); return c;
+}
+function rotFrac(c,dir){const {x,y,w,h}=c; return dir>0?{x:1-(y+h),y:x,w:h,h:w}:{x:y,y:1-(x+w),w:h,h:w};}
+function applyCrop(){
+  if(!srcImg) return;
+  const r=rotated();
+  const sx=Math.round(crop.x*r.width), sy=Math.round(crop.y*r.height);
+  const sw=Math.max(1,Math.round(crop.w*r.width)), sh=Math.max(1,Math.round(crop.h*r.height));
+  clipCanvas=document.createElement('canvas'); clipCanvas.width=sw; clipCanvas.height=sh;
+  clipCanvas.getContext('2d').drawImage(r,sx,sy,sw,sh,0,0,sw,sh);
+  $('imgTools').hidden=false; update();
+}
+function readFile(f){
+  if(!f) return;
+  if(!f.type.startsWith('image/')){status('写真（画像）のファイルを選んでください。',true); return;}
+  const url=URL.createObjectURL(f), im=new Image();
+  im.onload=()=>{
+    const k=Math.min(1,3000/Math.max(im.naturalWidth,im.naturalHeight));
+    const c=document.createElement('canvas'); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height); URL.revokeObjectURL(url);
+    srcImg=c; rot=0; crop={x:.05,y:.05,w:.9,h:.9}; status(''); openCrop();
+  };
+  im.onerror=()=>status('この写真は読み込めませんでした。JPEGかPNGの写真を選んでください。',true);
+  im.src=url;
+}
+
+let tmp=null, drag=null;
+function openCrop(){tmp={...crop}; $('crop').hidden=false; document.body.style.overflow='hidden'; requestAnimationFrame(drawCrop);}
+function closeCrop(){$('crop').hidden=true; document.body.style.overflow='';}
+function drawCrop(){
+  const r=rotated(), cv=$('ccv'), st=$('stage');
+  const k=Math.min(st.clientWidth/r.width, st.clientHeight/r.height);
+  cv.width=r.width; cv.height=r.height; cv.getContext('2d').drawImage(r,0,0);
+  cv.style.width=r.width*k+'px'; cv.style.height=r.height*k+'px'; placeRect();
+}
+function placeRect(){
+  const cv=$('ccv'), W=cv.offsetWidth, H=cv.offsetHeight, R=$('crect').style;
+  R.left=tmp.x*W+'px'; R.top=tmp.y*H+'px'; R.width=tmp.w*W+'px'; R.height=tmp.h*H+'px';
+}
+const MIN=.05, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+$('crect').addEventListener('pointerdown',e=>{e.preventDefault(); drag={h:e.target.dataset.h||'move',px:e.clientX,py:e.clientY,s:{...tmp}}; $('crect').setPointerCapture(e.pointerId);});
+$('crect').addEventListener('pointermove',e=>{
+  if(!drag) return;
+  const cv=$('ccv'), dx=(e.clientX-drag.px)/cv.offsetWidth, dy=(e.clientY-drag.py)/cv.offsetHeight, s=drag.s;
+  if(drag.h==='move'){ tmp={...s, x:clamp(s.x+dx,0,1-s.w), y:clamp(s.y+dy,0,1-s.h)}; }
+  else{
+    let l=s.x,t=s.y,r=s.x+s.w,b=s.y+s.h;
+    if(drag.h.includes('w')) l=clamp(l+dx,0,r-MIN);
+    if(drag.h.includes('e')) r=clamp(r+dx,l+MIN,1);
+    if(drag.h.includes('n')) t=clamp(t+dy,0,b-MIN);
+    if(drag.h.includes('s')) b=clamp(b+dy,t+MIN,1);
+    tmp={x:l,y:t,w:r-l,h:b-t};
+  }
+  placeRect();
+});
+['pointerup','pointercancel'].forEach(ev=>$('crect').addEventListener(ev,()=>{drag=null;}));
+$('cOk').onclick=()=>{crop={...tmp}; closeCrop(); applyCrop();};
+$('cCancel').onclick=()=>{closeCrop(); applyCrop();};
+$('cRot').onclick=()=>{tmp=rotFrac(tmp,1); crop=rotFrac(crop,1); rot=(rot+90)%360; drawCrop();};
+window.addEventListener('resize',()=>{if(!$('crop').hidden) drawCrop();});
+
+const drop=$('drop');
+drop.onclick=()=>$('file').click();
+drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); $('file').click();}};
+$('file').onchange=e=>{readFile(e.target.files[0]); e.target.value='';};
+drop.ondragover=e=>{e.preventDefault(); drop.classList.add('over');};
+drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault(); drop.classList.remove('over'); readFile(e.dataTransfer.files[0]);};
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/')); if(it) readFile(it.getAsFile());});
+$('cropBtn').onclick=openCrop;
+$('rotL').onclick=()=>{rot=(rot+270)%360; crop=rotFrac(crop,-1); applyCrop();};
+$('rotR').onclick=()=>{rot=(rot+90)%360; crop=rotFrac(crop,1); applyCrop();};
+['date','paper','dfmt','font','vpos','size','memoSize','memoText'].forEach(k=>$(k).addEventListener('input',update));
+
+/* ---- 保存 ---- */
+const dlPromise=(async()=>{ try{ return window.claude ? await window.claude.use('downloads') : null; }catch(e){ return null; } })();
+
+function fileBase(){
+  const p=dateParts(); const d=p?`${p.y}-${String(p.m).padStart(2,'0')}-${String(p.d).padStart(2,'0')}`:'日付なし';
+  return `${d}_${($('paper').value.trim()||'新聞').replace(/[\\/:*?"<>|]/g,'')}`;
+}
+function finalCanvas(){ const c=document.createElement('canvas'); drawSheet(c,200,false); return c; }
+function toBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q));}
+
+async function save(kind){
+  if(!clipCanvas){status('先に記事の写真を選んでください。',true); return;}
+  status('作っています…');
+  try{ await document.fonts.load(`600 40px "Klee One"`); await document.fonts.load(`700 40px "Zen Kaku Gothic New"`); }catch(e){}
+  const c=finalCanvas();
+  let blob, name;
+  if(kind==='pdf'){
+    if(!window.jspdf){status('PDFの部品が読み込めませんでした。「画像（JPG）で保存」を使ってください。',true); return;}
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+    pdf.addImage(c.toDataURL('image/jpeg',0.9),'JPEG',0,0,210,297);
+    blob=pdf.output('blob'); name=fileBase()+'.pdf';
+  }else{
+    blob=await toBlob(c,'image/jpeg',0.9); name=fileBase()+'.jpg';
+  }
+  // 長押し保存用にも出しておく
+  $('resultImg').src=c.toDataURL('image/jpeg',0.85);
+  const downloads=await dlPromise;
+  if(!downloads){ $('result').hidden=false; status('この画面では直接保存できません。下の画像を長押しして保存してください。'); return; }
+  try{
+    await downloads.save({filename:name, data:blob});
+    status('保存しました：'+name+'　→ 下の手順で印刷してください');
+    $('howto').classList.add('flash');
+  }catch(err){
+    if(err && err.code==='declined') status('保存をやめました。');
+    else if(err && err.code==='rate_limited') status('少し待ってから、もう一度押してください。',true);
+    else { $('result').hidden=false; status('うまく保存できませんでした。下の画像を長押しして保存してください。',true); }
+  }
+}
+$('savePdf').onclick=()=>save('pdf');
+$('saveJpg').onclick=()=>save('jpg');
+
+update();
+document.fonts && document.fonts.ready.then(update);
+</script>
+
+</body></html>
