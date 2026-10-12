@@ -33,6 +33,7 @@ input[type=date],input[type=text],select{font:inherit;font-size:17px;padding:10p
 input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:var(--soft)}
 .drop.over{border-color:var(--accent)}
+.drop.need{border-color:#c0392b;border-style:solid}
 .drop strong{color:var(--accent)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 button{font:inherit;font-size:15px;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
@@ -369,7 +370,7 @@ function readFile(f){
     const k=Math.min(1,3000/Math.max(im.naturalWidth,im.naturalHeight));
     const c=document.createElement('canvas'); c.width=Math.round(im.naturalWidth*k); c.height=Math.round(im.naturalHeight*k);
     c.getContext('2d').drawImage(im,0,0,c.width,c.height); URL.revokeObjectURL(url);
-    srcImg=c; rot=0; crop={x:.05,y:.05,w:.9,h:.9}; status(''); openCrop();
+    $('drop').classList.remove('need'); srcImg=c; rot=0; crop={x:.05,y:.05,w:.9,h:.9}; status(''); openCrop();
   };
   im.onerror=()=>status('この写真は読み込めませんでした。JPEGかPNGの写真を選んでください。',true);
   im.src=url;
@@ -440,7 +441,10 @@ const OS=/Android/i.test(UA) ? 'android'
 const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像をダウンロード」を押してください。'
   : OS==='ios' ? '下の画像を長押しして「"写真"に保存」を押してください。'
   : '下の画像を長押し（パソコンは右クリック）して保存してください。';
-$('resultCap').textContent='保存できない場合は、'+LONGPRESS;
+// 印刷の画面が出なかったときの案内
+const PRINT_FALLBACK = OS==='android' ? 'この画面からは印刷の画面を出せませんでした。下の画像を長押し →「画像をダウンロード」→ ダウンロードした画像を開いて「︙」→「印刷」で印刷できます。'
+  : OS==='ios' ? 'この画面からは印刷の画面を出せませんでした。下の画像を長押し →「共有」→「プリント」で、保存せずに印刷できます。'
+  : 'この画面からは印刷の画面を出せませんでした。下の画像を右クリックして保存し、開いて印刷してください。';
 // スマホでは、自分の機種の印刷手順だけを出す
 if(OS) document.querySelectorAll('[data-os]').forEach(el=>{ el.hidden = el.dataset.os!==OS; });
 
@@ -454,24 +458,43 @@ function fileBase(){
 function finalCanvas(){ const c=document.createElement('canvas'); drawSheet(c,200,false); return c; }
 function toBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q));}
 
+function needPhoto(){
+  if(clipCanvas) return false;
+  status('先に記事の写真を選んでください。',true);
+  const d=$('drop'); d.classList.add('need'); d.scrollIntoView({behavior:'smooth',block:'center'});
+  return true;
+}
+function showResult(src,msg){
+  $('resultImg').src=src; $('resultCap').textContent=msg; $('result').hidden=false;
+  $('result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+// 印刷の画面が本当に出たかを確かめる（出せない画面では何も起きないため）
+let printOpened=false;
+window.addEventListener('beforeprint',()=>{ printOpened=true; });
+
 async function loadFonts(){
   try{ await document.fonts.load(`600 40px "Klee One"`); await document.fonts.load(`700 40px "Zen Kaku Gothic New"`); }catch(e){}
 }
 
 /* 保存せずに、そのまま印刷する */
 async function printSheet(){
-  if(!clipCanvas){status('先に記事の写真を選んでください。',true); return;}
+  if(needPhoto()) return;
   status('印刷の準備をしています…');
   await loadFonts();
   const img=$('printImg');
   await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=finalCanvas().toDataURL('image/jpeg',0.92); });
   status('');
-  try{ window.print(); }
-  catch(e){ status('この画面では印刷できません。下の「保存してから印刷する」を使ってください。',true); }
+  printOpened=false;
+  try{ window.print(); }catch(e){}
+  setTimeout(()=>{
+    if(printOpened) return;
+    status('印刷の画面が出ませんでした。下の画像から印刷できます。',true);
+    showResult(img.src,PRINT_FALLBACK);
+  },1500);
 }
 
 async function save(kind){
-  if(!clipCanvas){status('先に記事の写真を選んでください。',true); return;}
+  if(needPhoto()) return;
   status('作っています…');
   await loadFonts();
   const c=finalCanvas();
@@ -485,9 +508,9 @@ async function save(kind){
     blob=await toBlob(c,'image/jpeg',0.9); name=fileBase()+'.jpg';
   }
   // 長押し保存用にも出しておく
-  $('resultImg').src=c.toDataURL('image/jpeg',0.85);
+  const jpg=c.toDataURL('image/jpeg',0.85); $('resultImg').src=jpg;
   const downloads=await dlPromise;
-  if(!downloads){ $('result').hidden=false; status('この画面では直接保存できません。'+LONGPRESS); return; }
+  if(!downloads){ status('この画面では直接保存できません。'+LONGPRESS); showResult(jpg,'保存できない場合は、'+LONGPRESS); return; }
   try{
     await downloads.save({filename:name, data:blob});
     status('保存しました：'+name+'　→ 下の手順で印刷してください');
@@ -495,7 +518,7 @@ async function save(kind){
   }catch(err){
     if(err && err.code==='declined') status('保存をやめました。');
     else if(err && err.code==='rate_limited') status('少し待ってから、もう一度押してください。',true);
-    else { $('result').hidden=false; status('うまく保存できませんでした。'+LONGPRESS,true); }
+    else { status('うまく保存できませんでした。'+LONGPRESS,true); showResult(jpg,'保存できない場合は、'+LONGPRESS); }
   }
 }
 $('printBtn').onclick=printSheet;
