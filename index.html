@@ -73,6 +73,15 @@ summary{cursor:pointer;font-weight:700}
 .crop-btns{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px}
 .crop-btns button{font-size:16px;padding:12px 6px;background:#2a333b;color:#fff;border-color:#46525c}
 .crop-btns .ok{background:#1d5c8f;border-color:#1d5c8f;font-weight:700}
+/* 印刷するときは、できあがったA4の画像だけを用紙いっぱいに出す */
+#printArea{display:none}
+@page{size:A4 portrait;margin:0}
+@media print{
+  .app,.crop{display:none!important}
+  html,body{margin:0!important;padding:0!important;background:#fff!important}
+  #printArea{display:block;width:210mm;height:297mm;overflow:hidden}
+  #printArea img{display:block;width:210mm;height:297mm}
+}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -148,28 +157,43 @@ summary{cursor:pointer;font-weight:700}
     </details>
 
     <div class="save">
-      <button type="button" class="primary" id="savePdf">PDFを保存（印刷用）</button>
-      <button type="button" id="saveJpg">画像（JPG）で保存</button>
+      <button type="button" class="primary" id="printBtn">印刷する</button>
       <p class="status" id="status" role="status"></p>
       <div class="howto" id="howto">
-        <p class="howto-title">印刷のしかた（保存したあと）</p>
-        <p data-os="ios"><b>iPhone</b>：保存したPDFを開く → 共有ボタン（□に↑）→「プリント」→ 複合機を選んで「プリント」</p>
-        <p class="sub" data-os="ios">Safariの場合は、アドレスバーの「↓」→ 保存したPDFをタップすると開きます。</p>
-        <p data-os="android"><b>Android</b>：画面上の通知、または「ファイル」アプリの「ダウンロード」から PDFを開く →「︙」→「印刷」</p>
+        <p class="howto-title">印刷のしかた</p>
+        <p data-os="android"><b>Android</b>：「印刷する」→ いちばん上の「プリンタを選択」で複合機を選ぶ → 印刷ボタン</p>
+        <p data-os="ios"><b>iPhone</b>：「印刷する」→「プリンタ」で複合機を選ぶ →「プリント」</p>
+        <p class="sub">スマホには保存されないので、容量は増えません。</p>
+        <p class="sub">印刷の画面が出ないときは、下の「保存してから印刷する」を使ってください。</p>
       </div>
+      <details>
+        <summary>保存してから印刷する</summary>
+        <div class="adv">
+          <button type="button" id="savePdf">PDFを保存</button>
+          <button type="button" id="saveJpg">画像（JPG）で保存</button>
+          <div class="howto" id="saveHowto">
+            <p class="howto-title">印刷のしかた（保存したあと）</p>
+            <p data-os="ios"><b>iPhone</b>：保存したPDFを開く → 共有ボタン（□に↑）→「プリント」→ 複合機を選んで「プリント」</p>
+            <p class="sub" data-os="ios">Safariの場合は、アドレスバーの「↓」→ 保存したPDFをタップすると開きます。</p>
+            <p data-os="android"><b>Android</b>：画面上の通知、または「ファイル」アプリの「ダウンロード」から PDFを開く →「︙」→「印刷」</p>
+          </div>
+        </div>
+      </details>
       <p class="hint">綴じしろとして上は3cm、左は2.5cm空けてあります。</p>
     </div>
   </section>
 
   <section class="preview" aria-label="プレビュー">
     <canvas id="sheet" width="827" height="1169" aria-label="A4用紙のプレビュー"></canvas>
-    <p class="cap">点線は綴じしろの目安です（保存したものには出ません）</p>
+    <p class="cap">点線は綴じしろの目安です（印刷・保存したものには出ません）</p>
     <div class="result" id="result" hidden>
       <p class="cap" id="resultCap"></p>
       <img id="resultImg" alt="できあがったA4台紙">
     </div>
   </section>
 </div>
+
+<div id="printArea"><img id="printImg" alt=""></div>
 
 <div class="crop" id="crop" hidden>
   <div class="crop-head">白い丸を指で動かして、記事だけを囲んでください</div>
@@ -418,7 +442,7 @@ const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像を�
   : '下の画像を長押し（パソコンは右クリック）して保存してください。';
 $('resultCap').textContent='保存できない場合は、'+LONGPRESS;
 // スマホでは、自分の機種の印刷手順だけを出す
-if(OS) document.querySelectorAll('#howto [data-os]').forEach(el=>{ el.hidden = el.dataset.os!==OS; });
+if(OS) document.querySelectorAll('[data-os]').forEach(el=>{ el.hidden = el.dataset.os!==OS; });
 
 /* ---- 保存 ---- */
 const dlPromise=(async()=>{ try{ return window.claude ? await window.claude.use('downloads') : null; }catch(e){ return null; } })();
@@ -430,10 +454,26 @@ function fileBase(){
 function finalCanvas(){ const c=document.createElement('canvas'); drawSheet(c,200,false); return c; }
 function toBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q));}
 
+async function loadFonts(){
+  try{ await document.fonts.load(`600 40px "Klee One"`); await document.fonts.load(`700 40px "Zen Kaku Gothic New"`); }catch(e){}
+}
+
+/* 保存せずに、そのまま印刷する */
+async function printSheet(){
+  if(!clipCanvas){status('先に記事の写真を選んでください。',true); return;}
+  status('印刷の準備をしています…');
+  await loadFonts();
+  const img=$('printImg');
+  await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=finalCanvas().toDataURL('image/jpeg',0.92); });
+  status('');
+  try{ window.print(); }
+  catch(e){ status('この画面では印刷できません。下の「保存してから印刷する」を使ってください。',true); }
+}
+
 async function save(kind){
   if(!clipCanvas){status('先に記事の写真を選んでください。',true); return;}
   status('作っています…');
-  try{ await document.fonts.load(`600 40px "Klee One"`); await document.fonts.load(`700 40px "Zen Kaku Gothic New"`); }catch(e){}
+  await loadFonts();
   const c=finalCanvas();
   let blob, name;
   if(kind==='pdf'){
@@ -451,13 +491,14 @@ async function save(kind){
   try{
     await downloads.save({filename:name, data:blob});
     status('保存しました：'+name+'　→ 下の手順で印刷してください');
-    $('howto').classList.add('flash');
+    $('saveHowto').classList.add('flash');
   }catch(err){
     if(err && err.code==='declined') status('保存をやめました。');
     else if(err && err.code==='rate_limited') status('少し待ってから、もう一度押してください。',true);
     else { $('result').hidden=false; status('うまく保存できませんでした。'+LONGPRESS,true); }
   }
 }
+$('printBtn').onclick=printSheet;
 $('savePdf').onclick=()=>save('pdf');
 $('saveJpg').onclick=()=>save('jpg');
 
