@@ -60,6 +60,7 @@ summary{cursor:pointer;font-weight:700}
 #sheet{width:100%;max-width:560px;height:auto;aspect-ratio:210/297;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.2);display:block}
 .cap{font-size:13px;color:var(--muted);margin:0}
 .result{width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px;align-items:center}
+#resultCap{font-size:16px;font-weight:700;color:var(--ink)}
 .result img{width:100%;box-shadow:0 2px 12px rgba(0,0,0,.2)}
 /* 切り取り画面（常に暗い背景） */
 .crop{position:fixed;inset:0;z-index:50;background:#14191e;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);gap:10px}
@@ -162,10 +163,10 @@ summary{cursor:pointer;font-weight:700}
       <p class="status" id="status" role="status"></p>
       <div class="howto" id="howto">
         <p class="howto-title">印刷のしかた</p>
-        <p data-os="android"><b>Android</b>：「印刷する」→ いちばん上の「プリンタを選択」で複合機を選ぶ → 印刷ボタン</p>
-        <p data-os="ios"><b>iPhone</b>：「印刷する」→「プリンタ」で複合機を選ぶ →「プリント」</p>
-        <p class="sub">スマホには保存されないので、容量は増えません。</p>
-        <p class="sub">印刷の画面が出ないときは、下の「保存してから印刷する」を使ってください。</p>
+        <p data-os="ios"><b>iPhone</b>：「印刷する」→ 下に出る台紙の画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」</p>
+        <p class="sub" data-os="ios">iPhoneには保存されないので、容量は増えません。</p>
+        <p data-os="android"><b>Android</b>：「印刷する」→ 下に出る台紙の画像を長押し →「画像をダウンロード」→ ダウンロードした画像を開いて「︙」→「印刷」</p>
+        <p data-os="pc"><b>パソコン</b>：「印刷する」→ 複合機を選んで印刷</p>
       </div>
       <details>
         <summary>保存してから印刷する</summary>
@@ -177,6 +178,7 @@ summary{cursor:pointer;font-weight:700}
             <p data-os="ios"><b>iPhone</b>：保存したPDFを開く → 共有ボタン（□に↑）→「プリント」→ 複合機を選んで「プリント」</p>
             <p class="sub" data-os="ios">Safariの場合は、アドレスバーの「↓」→ 保存したPDFをタップすると開きます。</p>
             <p data-os="android"><b>Android</b>：画面上の通知、または「ファイル」アプリの「ダウンロード」から PDFを開く →「︙」→「印刷」</p>
+            <p data-os="pc"><b>パソコン</b>：保存したPDFを開いて印刷</p>
           </div>
         </div>
       </details>
@@ -442,11 +444,11 @@ const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像を�
   : OS==='ios' ? '下の画像を長押しして「"写真"に保存」を押してください。'
   : '下の画像を長押し（パソコンは右クリック）して保存してください。';
 // 印刷の画面が出なかったときの案内
-const PRINT_FALLBACK = OS==='android' ? 'この画面からは印刷の画面を出せませんでした。下の画像を長押し →「画像をダウンロード」→ ダウンロードした画像を開いて「︙」→「印刷」で印刷できます。'
-  : OS==='ios' ? 'この画面からは印刷の画面を出せませんでした。下の画像を長押し →「共有」→「プリント」で、保存せずに印刷できます。'
-  : 'この画面からは印刷の画面を出せませんでした。下の画像を右クリックして保存し、開いて印刷してください。';
-// スマホでは、自分の機種の印刷手順だけを出す
-if(OS) document.querySelectorAll('[data-os]').forEach(el=>{ el.hidden = el.dataset.os!==OS; });
+const PRINT_STEPS = OS==='android' ? 'この画像を長押し →「画像をダウンロード」→ ダウンロードした画像を開いて「︙」→「印刷」'
+  : OS==='ios' ? 'この画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」'
+  : '印刷の画面が出ませんでした。この画像を右クリックして保存し、開いて印刷してください。';
+// 自分の機種の印刷手順だけを出す
+document.querySelectorAll('[data-os]').forEach(el=>{ el.hidden = el.dataset.os!==(OS||'pc'); });
 
 /* ---- 保存 ---- */
 const dlPromise=(async()=>{ try{ return window.claude ? await window.claude.use('downloads') : null; }catch(e){ return null; } })();
@@ -483,13 +485,15 @@ async function printSheet(){
   await loadFonts();
   const img=$('printImg');
   await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=finalCanvas().toDataURL('image/jpeg',0.92); });
+  // スマホは Claude の画面の中から印刷の画面を出せないので、画像を出して長押しで印刷してもらう
+  if(OS){ status('下に台紙の画像が出ました。画像を長押しして印刷してください。'); showResult(img.src,PRINT_STEPS); return; }
   status('');
   printOpened=false;
   try{ window.print(); }catch(e){}
   setTimeout(()=>{
     if(printOpened) return;
     status('印刷の画面が出ませんでした。下の画像から印刷できます。',true);
-    showResult(img.src,PRINT_FALLBACK);
+    showResult(img.src,PRINT_STEPS);
   },1500);
 }
 
