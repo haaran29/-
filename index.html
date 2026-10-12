@@ -386,6 +386,8 @@ function readFile(f){
 let tmp=null, drag=null;
 /* 切り取り中にスマホの「戻る」操作をしたら、切り取り画面だけを閉じる */
 let cropHist=false;
+// 「戻る」の履歴を使うと、ブラウザが勝手にいちばん上まで戻してしまうことがあるので止める
+try{ history.scrollRestoration='manual'; }catch(e){}
 function openCrop(){
   tmp={...crop}; $('crop').hidden=false; document.body.style.overflow='hidden'; requestAnimationFrame(drawCrop);
   try{ history.pushState({crop:1},''); cropHist=true; }catch(e){ cropHist=false; }
@@ -423,7 +425,9 @@ $('crect').addEventListener('pointermove',e=>{
   placeRect();
 });
 ['pointerup','pointercancel'].forEach(ev=>$('crect').addEventListener(ev,()=>{drag=null;}));
-$('cOk').onclick=()=>{crop={...tmp}; closeCrop(); applyCrop();};
+// 決定したら、できあがりのプレビューまで画面を移す
+function goPreview(){ setTimeout(()=>$('sheet').scrollIntoView({behavior:'smooth',block:'start'}),150); }
+$('cOk').onclick=()=>{crop={...tmp}; closeCrop(); applyCrop(); goPreview();};
 $('cCancel').onclick=()=>{closeCrop(); applyCrop();};
 $('cRot').onclick=()=>{tmp=rotFrac(tmp,1); crop=rotFrac(crop,1); rot=(rot+90)%360; drawCrop();};
 window.addEventListener('resize',()=>{if(!$('crop').hidden) drawCrop();});
