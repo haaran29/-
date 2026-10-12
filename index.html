@@ -47,7 +47,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 input[type=range]{width:100%}
 summary{cursor:pointer;font-weight:700}
 .adv{display:flex;flex-direction:column;gap:14px;margin-top:12px}
-.save{display:flex;flex-direction:column;gap:8px}
+.save{display:flex;flex-direction:column;gap:8px;width:100%;max-width:560px}
 .howto{border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
 .howto p{margin:0}
 .howto .howto-title{font-weight:700}
@@ -95,7 +95,7 @@ summary{cursor:pointer;font-weight:700}
 <div class="app">
   <section class="panel" aria-label="入力">
     <h1>新聞切り抜き台紙メーカー</h1>
-    <p class="lead">3つ入れて保存するだけ。A4用紙に記事と日付・新聞名が入ります。</p>
+    <p class="lead">入力して、いちばん下の「印刷する」を押すだけ。A4用紙に記事と日付・新聞名が入ります。</p>
 
     <div class="field">
       <label for="date"><span class="step">1</span>日付</label>
@@ -162,8 +162,12 @@ summary{cursor:pointer;font-weight:700}
         </div>
       </div>
     </details>
+  </section>
 
-    <div class="save">
+  <section class="preview" aria-label="プレビュー">
+    <canvas id="sheet" width="827" height="1169" aria-label="A4用紙のプレビュー"></canvas>
+    <p class="cap">点線は綴じしろの目安です（印刷・保存したものには出ません）</p>
+    <div class="save" id="saveArea">
       <button type="button" class="primary" id="printBtn">印刷する</button>
       <p class="status" id="status" role="status"></p>
       <div class="howto" id="howto">
@@ -189,11 +193,6 @@ summary{cursor:pointer;font-weight:700}
       </details>
       <p class="hint">綴じしろとして上は3cm、左は2.5cm空けてあります。</p>
     </div>
-  </section>
-
-  <section class="preview" aria-label="プレビュー">
-    <canvas id="sheet" width="827" height="1169" aria-label="A4用紙のプレビュー"></canvas>
-    <p class="cap">点線は綴じしろの目安です（印刷・保存したものには出ません）</p>
     <div class="result" id="result" hidden>
       <p class="cap" id="resultCap"></p>
       <img id="resultImg" alt="できあがったA4台紙">
