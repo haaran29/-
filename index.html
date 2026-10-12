@@ -534,12 +534,17 @@ async function sharePrint(){
 }
 $('shareBtn').onclick=sharePrint;
 
+let resultURL=null;
 async function printSheet(){
   if(needPhoto()) return;
   status('印刷の準備をしています…');
   await loadFonts();
   const img=$('printImg');
-  await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=finalCanvas().toDataURL('image/jpeg',0.92); });
+  const c=finalCanvas();
+  await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=c.toDataURL('image/jpeg',0.92); });
+  // 長押し用の画像は、iPhone が1枚の画像ファイルとして扱えるよう blob の URL にする
+  if(resultURL) URL.revokeObjectURL(resultURL);
+  resultURL=URL.createObjectURL(await toBlob(c,'image/jpeg',0.9));
   // スマホは Claude の画面の中から印刷の画面を出せないので、共有の画面からプリントしてもらう
   // iPhone は画像の長押し →「共有」→「プリント」で保存せずに印刷できるので、ボタンは出さない
   // （Safari では「共有してプリント」がダウンロードになってしまうため）
@@ -547,7 +552,7 @@ async function printSheet(){
     const share = OS!=='ios';
     if(share) shareFile=await makeFile(finalCanvas());
     status('');
-    showResult(img.src,PRINT_STEPS,share);
+    showResult(resultURL,PRINT_STEPS,share);
     return;
   }
   status('');
@@ -556,7 +561,7 @@ async function printSheet(){
   setTimeout(()=>{
     if(printOpened) return;
     status('印刷の画面が出ませんでした。下の画像から印刷できます。',true);
-    makeFile(finalCanvas()).then(f=>{ shareFile=f; showResult(img.src,PRINT_STEPS,true); });
+    makeFile(c).then(f=>{ shareFile=f; showResult(resultURL,PRINT_STEPS,true); });
   },1500);
 }
 
