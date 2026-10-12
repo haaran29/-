@@ -110,7 +110,13 @@ summary{cursor:pointer;font-weight:700}
     </div>
 
     <div class="field">
-      <span class="label"><span class="step">3</span>記事の写真</span>
+      <label for="memoText"><span class="step">3</span>メモ（書かなくてもOK）</label>
+      <textarea id="memoText" rows="3" placeholder="例：仕入れ価格への影響に注意"></textarea>
+      <span class="weekday" id="memoInfo"></span>
+    </div>
+
+    <div class="field">
+      <span class="label"><span class="step">4</span>記事の写真</span>
       <div class="drop" id="drop" tabindex="0" role="button" aria-label="写真を撮る・選ぶ">
         <strong>ここをタップ</strong>して写真を撮る・選ぶ<br>（パソコンはドラッグ＆ドロップも可）
       </div>
@@ -120,12 +126,6 @@ summary{cursor:pointer;font-weight:700}
         <button type="button" id="rotL">↺ 左に回す</button>
         <button type="button" id="rotR">↻ 右に回す</button>
       </div>
-    </div>
-
-    <div class="field">
-      <label for="memoText"><span class="step">4</span>メモ（書かなくてもOK）</label>
-      <textarea id="memoText" rows="3" placeholder="例：仕入れ価格への影響に注意"></textarea>
-      <span class="weekday" id="memoInfo"></span>
     </div>
 
     <details>
