@@ -176,8 +176,8 @@ summary{cursor:pointer;font-weight:700}
       <p class="status" id="status" role="status"></p>
       <div class="howto" id="howto">
         <p class="howto-title">印刷のしかた</p>
-        <p data-os="ios"><b>iPhone</b>：「印刷する」→「共有してプリント」→「プリント」→ 複合機を選んで「プリント」</p>
-        <p class="sub" data-os="ios">共有の画面からプリントすれば、iPhoneには保存されません。</p>
+        <p data-os="ios"><b>iPhone</b>：「印刷する」→ 下に出る台紙の画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」</p>
+        <p class="sub" data-os="ios">長押しの「共有」からプリントすれば、iPhoneには保存されません。</p>
         <p data-os="android"><b>Android</b>：「印刷する」→「共有してプリント」→ 出てきた画面で印刷を選ぶ（PDFが保存されたときは、開いて「︙」→「印刷」）</p>
         <p data-os="pc"><b>パソコン</b>：「印刷する」→ 複合機を選んで印刷</p>
       </div>
@@ -458,7 +458,7 @@ const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像を�
   : '下の画像を長押し（パソコンは右クリック）して保存してください。';
 // 印刷の画面が出なかったときの案内
 const PRINT_STEPS = OS==='android' ? '下の「共有してプリント」を押して、出てきた画面で印刷を選んでください。'
-  : OS==='ios' ? '下の「共有してプリント」→「プリント」→ 複合機を選んで「プリント」'
+  : OS==='ios' ? 'この画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」'
   : '印刷の画面が出ませんでした。下の「共有してプリント」を押すか、画像を右クリックして保存し、開いて印刷してください。';
 // 自分の機種の印刷手順だけを出す
 document.querySelectorAll('[data-os]').forEach(el=>{ el.hidden = el.dataset.os!==(OS||'pc'); });
@@ -541,10 +541,13 @@ async function printSheet(){
   const img=$('printImg');
   await new Promise(r=>{ img.onload=r; img.onerror=r; img.src=finalCanvas().toDataURL('image/jpeg',0.92); });
   // スマホは Claude の画面の中から印刷の画面を出せないので、共有の画面からプリントしてもらう
+  // iPhone は画像の長押し →「共有」→「プリント」で保存せずに印刷できるので、ボタンは出さない
+  // （Safari では「共有してプリント」がダウンロードになってしまうため）
   if(OS){
-    shareFile=await makeFile(finalCanvas());
+    const share = OS!=='ios';
+    if(share) shareFile=await makeFile(finalCanvas());
     status('');
-    showResult(img.src,PRINT_STEPS,true);
+    showResult(img.src,PRINT_STEPS,share);
     return;
   }
   status('');
