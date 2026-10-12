@@ -176,9 +176,9 @@ summary{cursor:pointer;font-weight:700}
       <p class="status" id="status" role="status"></p>
       <div class="howto" id="howto">
         <p class="howto-title">印刷のしかた</p>
-        <p data-os="ios"><b>iPhone</b>：「印刷する」→ 下に出る台紙の画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」</p>
-        <p class="sub" data-os="ios">長押しの「共有」からプリントすれば、iPhoneには保存されません。</p>
-        <p data-os="android"><b>Android</b>：「印刷する」→「共有してプリント」→ 出てきた画面で印刷を選ぶ（PDFが保存されたときは、開いて「︙」→「印刷」）</p>
+        <p data-os="ios" id="howtoIos"><b>iPhone</b>：「印刷する」→ 下に出る台紙の画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」</p>
+        <p class="sub" data-os="ios" id="howtoIosSub">長押しの「共有」からプリントすれば、iPhoneには保存されません。</p>
+        <p data-os="android" id="howtoAndroid"><b>Android</b>：「印刷する」→「共有してプリント」→ 出てきた画面で印刷を選ぶ（PDFが保存されたときは、開いて「︙」→「印刷」）</p>
         <p data-os="pc"><b>パソコン</b>：「印刷する」→ 複合機を選んで印刷</p>
       </div>
       <details>
@@ -456,8 +456,16 @@ const OS=/Android/i.test(UA) ? 'android'
 const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像をダウンロード」を押してください。'
   : OS==='ios' ? '下の画像を長押しして「"写真"に保存」を押してください。'
   : '下の画像を長押し（パソコンは右クリック）して保存してください。';
+// Claude の画面の中（枠の中）で開いているか。ふつうのウェブサイトとして開けば、スマホでも印刷の画面を直接出せる
+const IN_CLAUDE = (()=>{ try{ return window.self!==window.top; }catch(e){ return true; } })();
+if(!IN_CLAUDE){
+  $('howtoIos').innerHTML='<b>iPhone</b>：「印刷する」→「プリンタ」で複合機を選ぶ →「プリント」';
+  $('howtoIosSub').textContent='iPhoneには保存されないので、容量は増えません。';
+  $('howtoAndroid').innerHTML='<b>Android</b>：「印刷する」→ いちばん上の「プリンタを選択」で複合機を選ぶ → 印刷ボタン';
+}
 // 印刷の画面が出なかったときの案内
-const PRINT_STEPS = OS==='android' ? '下の「共有してプリント」を押して、出てきた画面で印刷を選んでください。'
+const PRINT_STEPS = !IN_CLAUDE && OS ? '印刷の画面が出ませんでした。下の「共有してプリント」を押して、出てきた画面で印刷を選んでください。'
+  : OS==='android' ? '下の「共有してプリント」を押して、出てきた画面で印刷を選んでください。'
   : OS==='ios' ? 'この画像を長押し →「共有」→「プリント」→ 複合機を選んで「プリント」'
   : '印刷の画面が出ませんでした。下の「共有してプリント」を押すか、画像を右クリックして保存し、開いて印刷してください。';
 // 自分の機種の印刷手順だけを出す
@@ -548,7 +556,7 @@ async function printSheet(){
   // スマホは Claude の画面の中から印刷の画面を出せないので、共有の画面からプリントしてもらう
   // iPhone は画像の長押し →「共有」→「プリント」で保存せずに印刷できるので、ボタンは出さない
   // （Safari では「共有してプリント」がダウンロードになってしまうため）
-  if(OS){
+  if(OS && IN_CLAUDE){
     const share = OS!=='ios';
     if(share) shareFile=await makeFile(finalCanvas());
     status('');
@@ -580,6 +588,12 @@ async function save(kind){
   // 長押し保存用にも出しておく
   const jpg=c.toDataURL('image/jpeg',0.85); $('resultImg').src=jpg;
   const downloads=await dlPromise;
+  if(!downloads && !IN_CLAUDE){
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+    status('保存しました：'+name+'　→ 下の手順で印刷してください'); $('saveHowto').classList.add('flash');
+    return;
+  }
   if(!downloads){ status('この画面では直接保存できません。'+LONGPRESS); showResult(jpg,'保存できない場合は、'+LONGPRESS); return; }
   try{
     await downloads.save({filename:name, data:blob});
