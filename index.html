@@ -31,6 +31,7 @@ textarea{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--li
 textarea:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
 input[type=date],input[type=text],select{font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:100%}
 input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.cam-btn{font-size:17px;padding:12px}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:var(--soft)}
 .drop.over{border-color:var(--accent)}
 .drop.need{border-color:#c0392b;border-style:solid}
@@ -121,10 +122,12 @@ summary{cursor:pointer;font-weight:700}
 
     <div class="field">
       <span class="label"><span class="step">4</span>記事の写真</span>
-      <div class="drop" id="drop" tabindex="0" role="button" aria-label="写真を撮る・選ぶ">
-        <strong>ここをタップ</strong>して写真を撮る・選ぶ<br>（パソコンはドラッグ＆ドロップも可）
+      <button type="button" class="primary cam-btn" id="camBtn" hidden>📷 カメラで撮る</button>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="写真を選ぶ">
+        <strong>ここをタップ</strong>して写真を選ぶ<br>（パソコンはドラッグ＆ドロップも可）
       </div>
       <input type="file" id="file" accept="image/*" hidden>
+      <input type="file" id="cam" accept="image/*" capture="environment" hidden>
     </div>
 
     <details>
@@ -440,6 +443,9 @@ const drop=$('drop');
 drop.onclick=()=>$('file').click();
 drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); $('file').click();}};
 $('file').onchange=e=>{readFile(e.target.files[0]); e.target.value='';};
+// Android は「写真を選ぶ」画面からカメラを起動できないことがあるので、カメラ専用のボタンを用意する
+$('cam').onchange=e=>{readFile(e.target.files[0]); e.target.value='';};
+$('camBtn').onclick=()=>$('cam').click();
 drop.ondragover=e=>{e.preventDefault(); drop.classList.add('over');};
 drop.ondragleave=()=>drop.classList.remove('over');
 drop.ondrop=e=>{e.preventDefault(); drop.classList.remove('over'); readFile(e.dataTransfer.files[0]);};
@@ -453,6 +459,8 @@ $('rotR').onclick=()=>{rot=(rot+90)%360; crop=rotFrac(crop,1); applyCrop();};
 const UA=navigator.userAgent;
 const OS=/Android/i.test(UA) ? 'android'
   : (/iPhone|iPad|iPod/i.test(UA) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1)) ? 'ios' : '';
+// スマホのときだけ「カメラで撮る」ボタンを出す
+$('camBtn').hidden = !OS;
 const LONGPRESS = OS==='android' ? '下の画像を長押しして「画像をダウンロード」を押してください。'
   : OS==='ios' ? '下の画像を長押しして「"写真"に保存」を押してください。'
   : '下の画像を長押し（パソコンは右クリック）して保存してください。';
