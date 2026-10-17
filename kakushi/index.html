@@ -229,15 +229,33 @@ function pixelate(c, img, r, s, smooth) {
   c.restore();
 }
 
+// 絵文字は文字の幅や高さの情報が見た目とずれることがあるので（❤️など）、
+// 一度描いて実際に色がついた範囲を切り出し、それを真ん中に置く
+const emojiCache = {};
+function emojiImage(em) {
+  if (emojiCache[em]) return emojiCache[em];
+  const S = 256, t = mk(S, S), tc = t.getContext('2d', { willReadFrequently: true });
+  tc.font = `160px ${EMOJI_FONT}`; tc.textAlign = 'center'; tc.textBaseline = 'middle';
+  tc.fillText(em, S / 2, S / 2);
+  const d = tc.getImageData(0, 0, S, S).data;
+  let x0 = S, y0 = S, x1 = -1, y1 = -1;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    if (d[(y * S + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) return null;
+  const o = mk(x1 - x0 + 1, y1 - y0 + 1);
+  o.getContext('2d').drawImage(t, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+  return (emojiCache[em] = o);
+}
+
 function drawStamp(c, r, s) {
-  const size = Math.min(r.w, r.h) * s;
+  const im = emojiImage(r.emoji);
+  if (!im) return;
+  const box = Math.min(r.w, r.h) * s * 0.92, f = box / Math.max(im.width, im.height);
+  const w = im.width * f, h = im.height * f;
   c.save();
-  c.font = `${size * 0.86}px ${EMOJI_FONT}`;
-  c.textAlign = 'center';
-  c.textBaseline = 'alphabetic';
-  const m = c.measureText(r.emoji);
-  const asc = m.actualBoundingBoxAscent || size * 0.7, desc = m.actualBoundingBoxDescent || size * 0.15;
-  c.fillText(r.emoji, (r.x + r.w / 2) * s, (r.y + r.h / 2) * s + (asc - desc) / 2);
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(im, (r.x + r.w / 2) * s - w / 2, (r.y + r.h / 2) * s - h / 2, w, h);
   c.restore();
 }
 
