@@ -6,7 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const COLORS = ['yellow', 'pink', 'blue', 'green', 'purple', 'orange'];
-const DEFAULT_SIZE = { width: 340, height: 220 };
+const DEFAULT_SIZE = { width: 290, height: 188 };
 
 let dataFile;
 let notes = [];
