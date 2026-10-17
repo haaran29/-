@@ -127,6 +127,16 @@
   .text:focus { background: rgba(255, 255, 255, 0.5); }
   li.done .text { text-decoration: line-through; color: var(--muted); }
 
+  .date {
+    flex: none;
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--muted);
+    opacity: 0.6;
+    white-space: nowrap;
+  }
+
   .del {
     flex: none;
     width: 20px; height: 20px;
@@ -273,6 +283,14 @@
         if (!rendering && item.text.trim() === '') removeItem(item);
       });
 
+      const date = document.createElement('span');
+      date.className = 'date';
+      if (item.createdAt) {
+        const d = new Date(item.createdAt);
+        date.textContent = formatDate(d);
+        date.title = '追加：' + d.toLocaleString('ja-JP', { dateStyle: 'long', timeStyle: 'short' });
+      }
+
       const del = document.createElement('button');
       del.className = 'del';
       del.title = '消す';
@@ -280,11 +298,17 @@
       del.addEventListener('mousedown', (e) => e.preventDefault());
       del.addEventListener('click', () => removeItem(item));
 
-      li.append(check, text, del);
+      li.append(check, text, date, del);
       list.append(li);
       if (item.id === focusId) text.focus();
     }
     updateProgress();
+  }
+
+  // 今年なら「10/17」、それより前なら「2025/10/17」
+  function formatDate(d) {
+    const md = `${d.getMonth() + 1}/${d.getDate()}`;
+    return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}/${md}`;
   }
 
   function removeItem(item) {
@@ -298,7 +322,7 @@
     if (e.key !== 'Enter' || e.isComposing) return;
     const text = addInput.value.trim();
     if (!text) return;
-    items.push({ id: uid(), text, done: false });
+    items.push({ id: uid(), text, done: false, createdAt: Date.now() });
     addInput.value = '';
     saveItems();
     render();
