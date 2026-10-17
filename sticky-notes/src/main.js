@@ -27,11 +27,33 @@ function load() {
 function saveNow() {
   clearTimeout(saveTimer);
   saveTimer = null;
-  fs.mkdirSync(path.dirname(dataFile), { recursive: true });
-  const tmp = dataFile + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify({ version: 1, notes }, null, 2));
-  fs.renameSync(tmp, dataFile);
+  const json = JSON.stringify({ version: 1, notes }, null, 2);
+  try {
+    fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+    const tmp = dataFile + '.tmp';
+    fs.writeFileSync(tmp, json);
+    try {
+      fs.renameSync(tmp, dataFile);
+    } catch {
+      // Windows ではウイルス対策ソフトなどがファイルをつかんでいて置き換えられないことがある
+      fs.writeFileSync(dataFile, json);
+      fs.rmSync(tmp, { force: true });
+    }
+  } catch (err) {
+    logError(err);
+    saveTimer = setTimeout(saveNow, 2000); // 少し待ってもう一度
+  }
 }
+
+// エラーの画面を出さずに error.log に書いておく
+function logError(err) {
+  try {
+    const line = `[${new Date().toLocaleString('ja-JP')}] ${err && err.stack || err}\n`;
+    fs.appendFileSync(path.join(app.getPath('userData'), 'error.log'), line);
+  } catch {}
+}
+process.on('uncaughtException', logError);
+process.on('unhandledRejection', logError);
 
 function save() {
   clearTimeout(saveTimer);

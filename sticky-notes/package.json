@@ -1,7 +1,7 @@
 {
   "name": "fusen-todo",
   "productName": "FusenTodo",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "パソコンの画面にいつも出ている、チェックを入れられる付箋メモ",
   "main": "src/main.js",
   "private": true,
