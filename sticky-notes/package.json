@@ -1,0 +1,52 @@
+{
+  "name": "fusen-todo",
+  "productName": "FusenTodo",
+  "version": "1.0.0",
+  "description": "パソコンの画面にいつも出ている、チェックを入れられる付箋メモ",
+  "main": "src/main.js",
+  "private": true,
+  "repository": "https://github.com/haaran29/-",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "build:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "io.github.haaran29.fusentodo",
+    "productName": "FusenTodo",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "package.json"],
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "付箋TODO",
+      "artifactName": "FusenTodo-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "FusenTodo-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "target": { "target": "dmg", "arch": ["universal"] },
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "FusenTodo-${version}-mac.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "build/icon.png",
+      "category": "Utility"
+    }
+  }
+}
