@@ -234,9 +234,10 @@ function pixelate(c, img, r, s, smooth) {
 const emojiCache = {};
 function emojiImage(em) {
   if (emojiCache[em]) return emojiCache[em];
-  const S = 256, t = mk(S, S), tc = t.getContext('2d', { willReadFrequently: true });
-  tc.font = `160px ${EMOJI_FONT}`; tc.textAlign = 'center'; tc.textBaseline = 'middle';
-  tc.fillText(em, S / 2, S / 2);
+  // 端末によっては絵文字が大きく右にずれて描かれるので、広いキャンバスに左から余裕をもって描く
+  const S = 640, t = mk(S, S), tc = t.getContext('2d', { willReadFrequently: true });
+  tc.font = `160px ${EMOJI_FONT}`; tc.textAlign = 'left'; tc.textBaseline = 'middle';
+  tc.fillText(em, 160, S / 2);
   const d = tc.getImageData(0, 0, S, S).data;
   let x0 = S, y0 = S, x1 = -1, y1 = -1;
   for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
