@@ -21,3 +21,4 @@
 
 ## ほかのアプリ
 - [付箋TODO](sticky-notes/)：パソコンの画面にいつも出ている、チェックを入れられる付箋メモ
+- [付箋TODO スマホ版](fusen/)：https://haaran29.github.io/-/fusen/

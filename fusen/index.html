@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7e36b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="付箋TODO">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>付箋TODO</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #faf7ec;
+    --ink: #3b3520;
+    --muted: #7a7150;
+    --line: rgba(60, 50, 20, 0.12);
+    --check: #2ea043;
+  }
+  .note { --paper: #fff6a6; --bar: #f7e36b; }
+  .note[data-color="pink"]   { --paper: #ffd9e3; --bar: #f9b8ca; }
+  .note[data-color="blue"]   { --paper: #d3eaff; --bar: #a9d3fb; }
+  .note[data-color="green"]  { --paper: #d9f5cd; --bar: #b3e6a0; }
+  .note[data-color="purple"] { --paper: #e8dcff; --bar: #cdb8fb; }
+  .note[data-color="orange"] { --paper: #ffe3c2; --bar: #fdc58a; }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; }
+
+  /* 上の帯 */
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px;
+    background: rgba(250, 247, 236, 0.92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .top h1 { flex: 1; margin: 0; font-size: 18px; }
+  .newBtn {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: var(--ink);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+    display: grid;
+    gap: 14px;
+  }
+
+  /* 付箋1枚 */
+  .note {
+    position: relative;
+    background: var(--paper);
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(60, 50, 20, 0.15);
+    overflow: hidden;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 4px 4px 12px;
+    background: var(--bar);
+  }
+  .title {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    padding: 6px 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-weight: bold;
+    outline: none;
+  }
+  .title::placeholder { color: var(--muted); font-weight: normal; opacity: 0.8; }
+  .progress { font-size: 12px; color: var(--muted); white-space: nowrap; margin-right: 4px; }
+  .iconBtn {
+    flex: none;
+    width: 38px; height: 38px;
+    border: 0; border-radius: 8px;
+    background: transparent;
+    font-size: 17px;
+    cursor: pointer;
+    opacity: 0.75;
+  }
+  .iconBtn:active { background: rgba(0, 0, 0, 0.08); }
+
+  .palette {
+    display: none;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid var(--line);
+  }
+  .palette.open { display: flex; }
+  .palette button {
+    width: 32px; height: 32px;
+    border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 50%;
+    cursor: pointer;
+  }
+
+  ul { list-style: none; margin: 0; padding: 4px 0 0; }
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 4px 4px 10px;
+  }
+  .check {
+    flex: none;
+    width: 26px; height: 26px;
+    margin-top: -1px;
+    padding: 0;
+    border: 2px solid var(--muted); border-radius: 6px;
+    background: rgba(255, 255, 255, 0.6);
+    display: grid; place-items: center;
+    cursor: pointer;
+  }
+  .check svg { width: 16px; height: 16px; visibility: hidden; }
+  li.done .check { background: var(--check); border-color: var(--check); }
+  li.done .check svg { visibility: visible; }
+  .text {
+    flex: 1;
+    min-width: 0;
+    padding: 0 2px;
+    outline: none;
+    word-break: break-word;
+    white-space: pre-wrap;
+    border-radius: 3px;
+  }
+  .text:focus { background: rgba(255, 255, 255, 0.55); }
+  li.done .text { text-decoration: line-through; color: var(--muted); }
+  .date {
+    flex: none;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.7;
+    white-space: nowrap;
+  }
+  .del {
+    flex: none;
+    width: 30px; height: 26px;
+    margin-top: -1px;
+    border: 0; border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    opacity: 0.6;
+    cursor: pointer;
+  }
+
+  .add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 12px;
+  }
+  .add input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    border-bottom: 1px dashed var(--line);
+    padding: 6px 2px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    outline: none;
+  }
+  .add input::placeholder { color: var(--muted); opacity: 0.8; }
+  .addBtn {
+    flex: none;
+    width: 36px; height: 36px;
+    border: 0; border-radius: 50%;
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 20px; line-height: 1;
+    cursor: pointer;
+  }
+
+  .clear {
+    display: none;
+    margin: 0 8px 8px auto;
+    padding: 4px 10px;
+    border: 0; border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .clear.show { display: block; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  .hint { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.7; margin-top: 8px; }
+
+  @media (hover: hover) {
+    .iconBtn:hover, .del:hover, .clear:hover { background: rgba(0, 0, 0, 0.08); }
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <h1>付箋TODO</h1>
+    <button class="newBtn" id="newNote">＋ 付箋</button>
+  </header>
+  <main id="notes"></main>
+
+<script>
+  const KEY = 'fusen-notes';
+  const COLORS = {
+    yellow: '#fff6a6', pink: '#ffd9e3', blue: '#d3eaff',
+    green: '#d9f5cd', purple: '#e8dcff', orange: '#ffe3c2',
+  };
+  const COLOR_NAMES = Object.keys(COLORS);
+  const CHECK_SVG = '<svg viewBox="0 0 12 12"><path d="M2 6.5l2.6 2.5L10 3.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+
+  // ---------- 保存と読み込み（この端末の中だけに保存） ----------
+  let notes = [];
+  try { notes = JSON.parse(localStorage.getItem(KEY)) || []; } catch { notes = []; }
+  if (!Array.isArray(notes)) notes = [];
+
+  let saveTimer;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 250);
+  }
+  function saveNow() {
+    clearTimeout(saveTimer);
+    try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch {}
+  }
+  addEventListener('pagehide', saveNow);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+  // 端末の空きが少なくなっても消されにくくする
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+  // 今年なら「10/17」、それより前なら「2025/10/17」
+  function formatDate(d) {
+    const md = `${d.getMonth() + 1}/${d.getDate()}`;
+    return d.getFullYear() === new Date().getFullYear() ? md : `${d.getFullYear()}/${md}`;
+  }
+
+  function setEditable(node) {
+    try { node.contentEditable = 'plaintext-only'; } catch { node.contentEditable = 'true'; }
+    if (node.contentEditable !== 'plaintext-only') node.contentEditable = 'true';
+  }
+
+  // ---------- 画面 ----------
+  const container = document.getElementById('notes');
+
+  function renderAll() {
+    container.textContent = '';
+    if (!notes.length) {
+      container.append(el('p', 'empty', '「＋ 付箋」で付箋を作れます'));
+    }
+    for (const note of notes) container.append(buildNote(note));
+    const hint = el('p', 'hint');
+    hint.innerHTML = 'メモはこのスマホの中だけに保存されます。<br>ホーム画面に追加すると、アプリのように開けます。';
+    container.append(hint);
+  }
+
+  function buildNote(note) {
+    const card = el('section', 'note');
+    card.dataset.color = COLORS[note.color] ? note.color : 'yellow';
+
+    // 上の帯
+    const head = el('div', 'head');
+    const title = el('input', 'title');
+    title.placeholder = 'タイトル';
+    title.maxLength = 60;
+    title.value = note.title || '';
+    title.enterKeyHint = 'next';
+    title.addEventListener('input', () => { note.title = title.value; save(); });
+    const progress = el('span', 'progress');
+    const colorBtn = el('button', 'iconBtn', '🎨');
+    colorBtn.title = '色を変える';
+    const delBtn = el('button', 'iconBtn', '✕');
+    delBtn.title = 'この付箋を削除';
+    head.append(title, progress, colorBtn, delBtn);
+
+    const palette = el('div', 'palette');
+    for (const name of COLOR_NAMES) {
+      const b = el('button');
+      b.style.background = COLORS[name];
+      b.title = name;
+      b.addEventListener('click', () => {
+        note.color = name;
+        card.dataset.color = name;
+        palette.classList.remove('open');
+        save();
+      });
+      palette.append(b);
+    }
+    colorBtn.addEventListener('click', () => palette.classList.toggle('open'));
+
+    delBtn.addEventListener('click', () => {
+      const hasContent = note.items.length > 0 || (note.title || '').trim() !== '';
+      if (hasContent && !confirm('この付箋を削除しますか？')) return;
+      notes = notes.filter((n) => n !== note);
+      saveNow();
+      renderAll();
+    });
+
+    // やることの一覧
+    const list = el('ul');
+    const addRow = el('div', 'add');
+    const addInput = el('input');
+    addInput.placeholder = 'やることを追加';
+    addInput.enterKeyHint = 'enter';
+    const addBtn = el('button', 'addBtn', '＋');
+    addBtn.title = '追加';
+    addRow.append(addInput, addBtn);
+    const clear = el('button', 'clear', '完了したものを消す');
+
+    let rendering = false;
+    function renderItems(focusId) {
+      rendering = true;
+      list.textContent = '';
+      rendering = false;
+      for (const item of note.items) {
+        const li = el('li');
+        li.classList.toggle('done', !!item.done);
+
+        const check = el('button', 'check');
+        check.innerHTML = CHECK_SVG;
+        check.title = item.done ? 'チェックを外す' : 'チェックを入れる';
+        check.addEventListener('click', () => {
+          item.done = !item.done;
+          save();
+          renderItems();
+        });
+
+        const text = el('div', 'text', item.text);
+        setEditable(text);
+        text.addEventListener('input', () => { item.text = text.textContent; save(); });
+        text.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+            e.preventDefault();
+            text.blur();
+          }
+        });
+        text.addEventListener('blur', () => {
+          if (!rendering && item.text.trim() === '') removeItem(item);
+        });
+
+        const date = el('span', 'date');
+        if (item.createdAt) {
+          const d = new Date(item.createdAt);
+          date.textContent = formatDate(d);
+          date.title = '追加：' + d.toLocaleString('ja-JP', { dateStyle: 'long', timeStyle: 'short' });
+        }
+
+        const del = el('button', 'del', '✕');
+        del.title = '消す';
+        del.addEventListener('mousedown', (e) => e.preventDefault());
+        del.addEventListener('click', () => removeItem(item));
+
+        li.append(check, text, date, del);
+        list.append(li);
+        if (item.id === focusId) text.focus();
+      }
+      const done = note.items.filter((i) => i.done).length;
+      progress.textContent = note.items.length ? `${done}/${note.items.length}` : '';
+      clear.classList.toggle('show', done > 0);
+    }
+
+    function removeItem(item) {
+      if (!note.items.includes(item)) return;
+      note.items = note.items.filter((i) => i !== item);
+      save();
+      renderItems();
+    }
+
+    function addItem() {
+      const value = addInput.value.trim();
+      if (!value) return;
+      note.items.push({ id: uid(), text: value, done: false, createdAt: Date.now() });
+      addInput.value = '';
+      save();
+      renderItems();
+    }
+    addInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        addItem();
+      }
+    });
+    addBtn.addEventListener('mousedown', (e) => e.preventDefault()); // キーボードを閉じない
+    addBtn.addEventListener('click', () => { addItem(); addInput.focus(); });
+    title.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.isComposing) addInput.focus();
+    });
+
+    clear.addEventListener('click', () => {
+      note.items = note.items.filter((i) => !i.done);
+      save();
+      renderItems();
+    });
+
+    renderItems();
+    card.append(head, palette, list, addRow, clear);
+    card.focusAdd = () => addInput.focus();
+    return card;
+  }
+
+  document.getElementById('newNote').addEventListener('click', () => {
+    const last = notes[0];
+    const color = last ? COLOR_NAMES[(COLOR_NAMES.indexOf(last.color) + 1) % COLOR_NAMES.length] : 'yellow';
+    notes.unshift({ id: uid(), title: '', color, items: [], createdAt: Date.now() });
+    saveNow();
+    renderAll();
+    window.scrollTo({ top: 0 });
+    container.querySelector('.note').focusAdd();
+  });
+
+  if (!notes.length) notes.push({ id: uid(), title: '', color: 'yellow', items: [], createdAt: Date.now() });
+  renderAll();
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
