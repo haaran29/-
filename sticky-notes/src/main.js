@@ -199,6 +199,8 @@ function loginPath() {
 function buildTrayMenu() {
   const openAtLogin = app.getLoginItemSettings({ path: loginPath() }).openAtLogin;
   return Menu.buildFromTemplate([
+    { label: `付箋TODO（版 ${app.getVersion()}）`, enabled: false },
+    { type: 'separator' },
     { label: '新しい付箋', click: () => openNoteWindow(newNote()) },
     { label: 'すべての付箋を表示', click: showAll },
     { type: 'separator' },
@@ -219,7 +221,7 @@ function buildTrayMenu() {
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'tray.png'));
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
-  tray.setToolTip('付箋TODO');
+  tray.setToolTip(`付箋TODO ${app.getVersion()}`);
   tray.setContextMenu(buildTrayMenu());
   tray.on('click', showAll);
 }

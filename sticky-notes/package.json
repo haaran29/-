@@ -1,7 +1,7 @@
 {
   "name": "fusen-todo",
   "productName": "FusenTodo",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "パソコンの画面にいつも出ている、チェックを入れられる付箋メモ",
   "main": "src/main.js",
   "private": true,
@@ -32,7 +32,8 @@
       "artifactName": "FusenTodo-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "FusenTodo-Portable-${version}.${ext}"
+      "artifactName": "FusenTodo-Portable-${version}.${ext}",
+      "unpackDirName": false
     },
     "mac": {
       "target": { "target": "dmg", "arch": ["universal"] },
