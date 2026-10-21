@@ -66,6 +66,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .swatches button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
 .emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
 .emojis button{font-size:24px;line-height:1;padding:6px 0;border-radius:10px;border:1.5px solid transparent;background:var(--soft)}
+.emojis button.drawn{display:flex;align-items:center;justify-content:center;padding:4px}
+.emojis button.drawn img{width:100%;max-width:40px;height:26px;object-fit:contain}
 .emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .ghost{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--soft);border-radius:10px;padding:8px 10px;font-size:.88rem}
@@ -174,6 +176,76 @@ const $ = s => document.querySelector(s);
 const cv = $('#cv'), ctx = cv.getContext('2d'), stage = $('#stage');
 const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
 const EMOJIS = ['😊','😎','🙂','😺','🐶','🐻','🐰','🐼','⭐','❤️','🌸','🍀'];
+
+// 絵文字にない「サングラスだけ」「マスクだけ」のスタンプは、ここで描く（640×640 の真ん中あたりに）
+function heartPath(g, cx, cy, w) {
+  const h = w * 0.9;
+  g.moveTo(cx, cy + h * 0.5);
+  g.bezierCurveTo(cx - w * 0.55, cy + h * 0.1, cx - w * 0.6, cy - h * 0.45, cx - w * 0.27, cy - h * 0.5);
+  g.bezierCurveTo(cx - w * 0.1, cy - h * 0.52, cx, cy - h * 0.38, cx, cy - h * 0.28);
+  g.bezierCurveTo(cx, cy - h * 0.38, cx + w * 0.1, cy - h * 0.52, cx + w * 0.27, cy - h * 0.5);
+  g.bezierCurveTo(cx + w * 0.6, cy - h * 0.45, cx + w * 0.55, cy + h * 0.1, cx, cy + h * 0.5);
+}
+function shine(g, x, y, w, h) {  // レンズのつや
+  g.save(); g.clip();
+  g.fillStyle = 'rgba(255,255,255,.22)';
+  g.beginPath(); g.moveTo(x + w * 0.15, y + h); g.lineTo(x + w * 0.45, y); g.lineTo(x + w * 0.62, y); g.lineTo(x + w * 0.32, y + h); g.fill();
+  g.restore();
+}
+function maskLoops(g, color) {
+  g.strokeStyle = color; g.lineWidth = 9; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(170, 262); g.bezierCurveTo(70, 240, 70, 410, 170, 392); g.stroke();
+  g.beginPath(); g.moveTo(470, 262); g.bezierCurveTo(570, 240, 570, 410, 470, 392); g.stroke();
+}
+function pleatedMask(g, fill, edge, pleat) {
+  maskLoops(g, edge);
+  g.beginPath(); g.roundRect(160, 230, 320, 190, 46);
+  g.fillStyle = fill; g.fill(); g.lineWidth = 5; g.strokeStyle = edge; g.stroke();
+  g.strokeStyle = pleat; g.lineWidth = 5; g.lineCap = 'round';
+  for (const y of [285, 325, 365]) { g.beginPath(); g.moveTo(178, y); g.quadraticCurveTo(320, y + 10, 462, y); g.stroke(); }
+}
+const DRAWN = {
+  'sg-black'(g) {  // 黒いサングラス
+    g.fillStyle = '#16171a';
+    g.beginPath(); g.roundRect(60, 238, 520, 30, 12); g.fill();
+    g.beginPath(); g.roundRect(80, 250, 215, 140, [14, 14, 64, 64]); g.fill();
+    g.beginPath(); g.roundRect(345, 250, 215, 140, [14, 14, 64, 64]); g.fill();
+    g.fillRect(290, 255, 60, 26);
+    g.beginPath(); g.roundRect(80, 250, 215, 140, [14, 14, 64, 64]); shine(g, 80, 250, 215, 140);
+    g.beginPath(); g.roundRect(345, 250, 215, 140, [14, 14, 64, 64]); shine(g, 345, 250, 215, 140);
+  },
+  'sg-round'(g) {  // 丸いサングラス
+    g.strokeStyle = '#c99a3b'; g.lineWidth = 12;
+    g.beginPath(); g.arc(320, 300, 34, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+    for (const x of [190, 450]) {
+      g.beginPath(); g.arc(x, 320, 112, 0, Math.PI * 2);
+      g.fillStyle = '#2a2420'; g.fill(); g.stroke();
+      g.beginPath(); g.arc(x, 320, 106, 0, Math.PI * 2); shine(g, x - 106, 214, 212, 212);
+    }
+  },
+  'sg-heart'(g) {  // ハートのサングラス
+    g.strokeStyle = '#ffffff'; g.lineWidth = 12; g.lineJoin = 'round';
+    g.fillStyle = '#e8336f'; g.fillRect(292, 278, 56, 18);
+    for (const x of [182, 458]) {
+      g.beginPath(); heartPath(g, x, 330, 250);
+      g.fillStyle = '#ff4f8b'; g.fill(); g.stroke();
+      g.beginPath(); heartPath(g, x, 330, 240); shine(g, x - 120, 220, 240, 220);
+    }
+  },
+  'mask-white'(g) { pleatedMask(g, '#fbfbfc', '#c7ccd4', '#dde1e7'); },
+  'mask-blue'(g) { pleatedMask(g, '#a9d8ef', '#6fb2d6', '#8cc6e4'); },
+  'mask-black'(g) {  // 黒い布マスク
+    maskLoops(g, '#2b2d33');
+    g.beginPath();
+    g.moveTo(165, 255); g.quadraticCurveTo(320, 195, 475, 255);
+    g.quadraticCurveTo(490, 360, 430, 410); g.quadraticCurveTo(320, 470, 210, 410);
+    g.quadraticCurveTo(150, 360, 165, 255);
+    g.fillStyle = '#2b2d33'; g.fill();
+    g.strokeStyle = '#45484f'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(320, 228); g.quadraticCurveTo(332, 340, 320, 448); g.stroke();
+  },
+};
+const STAMPS = [...EMOJIS, ...Object.keys(DRAWN)];
 const COLORS = ['#1e2430','#ffffff','#f6a5c0','#ffd54a','#8fc7ff','#7a5a45'];
 const BLUR_N = [16, 12, 9, 7, 5];     // 短い辺をいくつに分けるか（少ないほど強い）
 const MOSAIC_N = [16, 12, 9, 6, 4];
@@ -236,8 +308,11 @@ function emojiImage(em) {
   if (emojiCache[em]) return emojiCache[em];
   // 端末によっては絵文字が大きく右にずれて描かれるので、広いキャンバスに左から余裕をもって描く
   const S = 640, t = mk(S, S), tc = t.getContext('2d', { willReadFrequently: true });
-  tc.font = `160px ${EMOJI_FONT}`; tc.textAlign = 'left'; tc.textBaseline = 'middle';
-  tc.fillText(em, 160, S / 2);
+  if (DRAWN[em]) DRAWN[em](tc);
+  else {
+    tc.font = `160px ${EMOJI_FONT}`; tc.textAlign = 'left'; tc.textBaseline = 'middle';
+    tc.fillText(em, 160, S / 2);
+  }
   const d = tc.getImageData(0, 0, S, S).data;
   let x0 = S, y0 = S, x1 = -1, y1 = -1;
   for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
@@ -252,12 +327,18 @@ function emojiImage(em) {
 function drawStamp(c, r, s) {
   const im = emojiImage(r.emoji);
   if (!im) return;
-  const box = Math.min(r.w, r.h) * s * 0.92, f = box / Math.max(im.width, im.height);
+  const f = Math.min(r.w * s / im.width, r.h * s / im.height) * 0.94;
   const w = im.width * f, h = im.height * f;
   c.save();
   c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
   c.drawImage(im, (r.x + r.w / 2) * s - w / 2, (r.y + r.h / 2) * s - h / 2, w, h);
   c.restore();
+}
+// スタンプの横長ぐあい（サングラスやマスクは横長、絵文字はほぼ正方形）
+function stampAspect(em) { const im = emojiImage(em); return im ? im.width / im.height : 1; }
+function fitStampBox(r) {  // 面積と中心はそのままで、スタンプの形に合わせる
+  const a = stampAspect(r.emoji), size = Math.sqrt(r.w * r.h), cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  r.w = size * Math.sqrt(a); r.h = size / Math.sqrt(a); r.x = cx - r.w / 2; r.y = cy - r.h / 2;
 }
 
 // img は「元の写真を s 倍した大きさ」のキャンバス。表示用と保存用で同じ処理を使う
@@ -456,7 +537,7 @@ cv.addEventListener('pointermove', e => {
     }
     const r = drag.r;
     let w = Math.max(min, Math.abs(p.x - ax)), h = Math.max(min, Math.abs(p.y - ay));
-    if (r.kind === 'stamp') w = h = Math.max(w, h);
+    if (r.kind === 'stamp') { const a = stampAspect(r.emoji); w = Math.max(w, h * a); h = w / a; }
     r.w = w; r.h = h;
     r.x = p.x < ax ? ax - w : ax;
     r.y = p.y < ay ? ay - h : ay;
@@ -471,6 +552,7 @@ function endDrag(e) {
     if (d.hadSel) { select(null); return; }
     const s = Math.min(iw, ih) * 0.18;  // タップだけなら、その場所に丸を置く
     const r = newRegion(d.sx - s / 2, d.sy - s / 2, s, s);
+    if (r.kind === 'stamp') fitStampBox(r);
     regions.push(r); select(r);
   }
   commit(d.before); draw();
@@ -481,17 +563,22 @@ cv.addEventListener('pointercancel', endDrag);
 // ---------- パネル ----------
 const colorsEl = $('#colors'), emojisEl = $('#emojis');
 COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + c); colorsEl.append(b); });
-EMOJIS.forEach(em => { const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em; b.textContent = em; emojisEl.append(b); });
+const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'sg-heart': 'ハートのサングラス', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-black': '黒いマスク' };
+STAMPS.forEach(em => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em;
+  if (DRAWN[em]) {
+    const im = new Image(); im.alt = ''; im.src = emojiImage(em).toDataURL();
+    b.append(im); b.setAttribute('aria-label', STAMP_NAMES[em]); b.classList.add('drawn');
+  } else b.textContent = em;
+  emojisEl.append(b);
+});
 
 function change(prop, val) {
   const before = snap();
   st[prop] = val;
   if (sel) {
     sel[prop] = val;
-    if (prop === 'kind' && val === 'stamp') {  // スタンプは正方形にそろえる
-      const s = Math.max(sel.w, sel.h), cx = sel.x + sel.w / 2, cy = sel.y + sel.h / 2;
-      Object.assign(sel, { w: s, h: s, x: cx - s / 2, y: cy - s / 2 });
-    }
+    if (sel.kind === 'stamp' && (prop === 'kind' || prop === 'emoji')) fitStampBox(sel);  // スタンプの形に枠を合わせる
     commit(before);
   }
   updatePanel(); draw();
