@@ -223,13 +223,35 @@ const DRAWN = {
       g.beginPath(); g.arc(x, 320, 106, 0, Math.PI * 2); shine(g, x - 106, 214, 212, 212);
     }
   },
-  'sg-heart'(g) {  // ハートのサングラス
-    g.strokeStyle = '#ffffff'; g.lineWidth = 12; g.lineJoin = 'round';
-    g.fillStyle = '#e8336f'; g.fillRect(292, 278, 56, 18);
-    for (const x of [182, 458]) {
-      g.beginPath(); heartPath(g, x, 330, 250);
-      g.fillStyle = '#ff4f8b'; g.fill(); g.stroke();
-      g.beginPath(); heartPath(g, x, 330, 240); shine(g, x - 120, 220, 240, 220);
+  'eyemask'(g) {  // お目目ぱっちりのアイマスク
+    g.strokeStyle = '#8a5a6e'; g.lineWidth = 14; g.lineCap = 'round';  // ゴムひも
+    g.beginPath(); g.moveTo(40, 292); g.lineTo(600, 292); g.stroke();
+    const body = () => {
+      g.beginPath(); g.moveTo(320, 262);
+      g.bezierCurveTo(250, 222, 120, 222, 92, 262); g.bezierCurveTo(62, 305, 80, 385, 150, 398);
+      g.bezierCurveTo(215, 410, 270, 392, 320, 368); g.bezierCurveTo(370, 392, 425, 410, 490, 398);
+      g.bezierCurveTo(560, 385, 578, 305, 548, 262); g.bezierCurveTo(520, 222, 390, 222, 320, 262);
+    };
+    body(); g.fillStyle = '#f9c0d3'; g.fill();
+    g.lineWidth = 6; g.strokeStyle = '#e58aab'; g.stroke();
+    g.save(); g.translate(320, 315); g.scale(0.9, 0.86); g.translate(-320, -315);  // ふちのステッチ
+    body(); g.restore();
+    g.setLineDash([10, 9]); g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.stroke(); g.setLineDash([]);
+    for (const [x, dir] of [[202, -1], [438, 1]]) {
+      const y = 318;
+      g.beginPath(); g.ellipse(x, y, 50, 56, 0, 0, Math.PI * 2); g.fillStyle = '#ffffff'; g.fill();
+      const gr = g.createLinearGradient(0, y - 44, 0, y + 50);
+      gr.addColorStop(0, '#2c1d3a'); gr.addColorStop(1, '#8c62c4');
+      g.beginPath(); g.ellipse(x, y + 4, 38, 47, 0, 0, Math.PI * 2); g.fillStyle = gr; g.fill();
+      g.beginPath(); g.ellipse(x, y + 6, 16, 20, 0, 0, Math.PI * 2); g.fillStyle = '#1a1022'; g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.arc(x - 14, y - 16, 14, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(x + 14, y + 22, 6, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#2a1f2e'; g.lineCap = 'round';  // 上まぶたとまつげ
+      g.lineWidth = 10; g.beginPath(); g.ellipse(x, y + 2, 56, 62, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+      g.lineWidth = 7;
+      const ex = x + dir * 50, ey = y - 30;
+      for (const [dx, dy] of [[14, -12], [20, 0], [18, 12]]) { g.beginPath(); g.moveTo(ex, ey + dy * 0.4); g.lineTo(ex + dir * dx, ey + dy - 6); g.stroke(); }
     }
   },
   'mask-white'(g) { pleatedMask(g, '#fbfbfc', '#c7ccd4', '#dde1e7'); },
@@ -563,7 +585,7 @@ cv.addEventListener('pointercancel', endDrag);
 // ---------- パネル ----------
 const colorsEl = $('#colors'), emojisEl = $('#emojis');
 COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + c); colorsEl.append(b); });
-const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'sg-heart': 'ハートのサングラス', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-black': '黒いマスク' };
+const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-black': '黒いマスク' };
 STAMPS.forEach(em => {
   const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em;
   if (DRAWN[em]) {
