@@ -64,11 +64,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .swatches{display:flex;gap:8px;flex-wrap:wrap}
 .swatches button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
 .swatches button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
-.emojis{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.emojis button{font-size:24px;line-height:1;padding:6px 0;border-radius:10px;border:1.5px solid transparent;background:var(--soft)}
-.emojis button.drawn{display:flex;align-items:center;justify-content:center;padding:4px}
-.emojis button.drawn img{width:100%;max-width:40px;height:26px;object-fit:contain}
-.emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.drawn-stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.emojis button,.drawn-stamps button{font-size:24px;line-height:1;padding:6px 0;border-radius:10px;border:1.5px solid transparent;background:var(--soft)}
+.drawn-stamps button{display:flex;align-items:center;justify-content:center;padding:6px 4px}
+.drawn-stamps img{width:100%;max-width:58px;height:30px;object-fit:contain}
+.emojis button[aria-pressed="true"],.drawn-stamps button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .ghost{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--soft);border-radius:10px;padding:8px 10px;font-size:.88rem}
 .ghost:disabled{opacity:.45;cursor:default}
@@ -85,7 +86,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   .app{grid-template-columns:minmax(0,1fr)}
   h1{font-size:1.45rem}
 }
-@media (prefers-reduced-motion:no-preference){.seg button,.emojis button,.swatches button{transition:background .15s,border-color .15s}}
+@media (prefers-reduced-motion:no-preference){.seg button,.emojis button,.drawn-stamps button,.swatches button{transition:background .15s,border-color .15s}}
 </style>
 
 <div class="app">
@@ -139,6 +140,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     <div class="group" id="g-emoji" hidden>
       <span class="label">スタンプ</span>
       <div class="emojis" id="emojis"></div>
+      <div class="drawn-stamps" id="drawn-stamps"></div>
     </div>
 
     <div class="group">
@@ -197,12 +199,16 @@ function maskLoops(g, color) {
   g.beginPath(); g.moveTo(170, 262); g.bezierCurveTo(70, 240, 70, 410, 170, 392); g.stroke();
   g.beginPath(); g.moveTo(470, 262); g.bezierCurveTo(570, 240, 570, 410, 470, 392); g.stroke();
 }
-function pleatedMask(g, fill, edge, pleat) {
-  maskLoops(g, edge);
-  g.beginPath(); g.roundRect(160, 230, 320, 190, 46);
-  g.fillStyle = fill; g.fill(); g.lineWidth = 5; g.strokeStyle = edge; g.stroke();
-  g.strokeStyle = pleat; g.lineWidth = 5; g.lineCap = 'round';
-  for (const y of [285, 325, 365]) { g.beginPath(); g.moveTo(178, y); g.quadraticCurveTo(320, y + 10, 462, y); g.stroke(); }
+function clothMask(g, fill, seam, loop, edge) {  // 布マスク（白・水色・ピンク・黒で同じ形）
+  maskLoops(g, loop);
+  g.beginPath();
+  g.moveTo(165, 255); g.quadraticCurveTo(320, 195, 475, 255);
+  g.quadraticCurveTo(490, 360, 430, 410); g.quadraticCurveTo(320, 470, 210, 410);
+  g.quadraticCurveTo(150, 360, 165, 255);
+  g.fillStyle = fill; g.fill();
+  if (edge) { g.strokeStyle = edge; g.lineWidth = 5; g.stroke(); }  // 白いマスクは白い写真でも見えるようにふちを描く
+  g.strokeStyle = seam; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(320, 228); g.quadraticCurveTo(332, 340, 320, 448); g.stroke();
 }
 // アイマスクの布とゴムひも。目は種類ごとに上から描く（左目 x=202、右目 x=438、高さ y=318）
 function eyeMaskBody(g, fill, edge, strap) {
@@ -305,20 +311,16 @@ const DRAWN = {
       g.beginPath(); g.moveTo(x, 352); g.quadraticCurveTo(x + 13, 375, x, 384); g.quadraticCurveTo(x - 13, 375, x, 352); g.fill();
     }
   },
-  'mask-white'(g) { pleatedMask(g, '#fbfbfc', '#c7ccd4', '#dde1e7'); },
-  'mask-blue'(g) { pleatedMask(g, '#a9d8ef', '#6fb2d6', '#8cc6e4'); },
-  'mask-black'(g) {  // 黒い布マスク
-    maskLoops(g, '#2b2d33');
-    g.beginPath();
-    g.moveTo(165, 255); g.quadraticCurveTo(320, 195, 475, 255);
-    g.quadraticCurveTo(490, 360, 430, 410); g.quadraticCurveTo(320, 470, 210, 410);
-    g.quadraticCurveTo(150, 360, 165, 255);
-    g.fillStyle = '#2b2d33'; g.fill();
-    g.strokeStyle = '#45484f'; g.lineWidth = 5;
-    g.beginPath(); g.moveTo(320, 228); g.quadraticCurveTo(332, 340, 320, 448); g.stroke();
-  },
+  'mask-white'(g) { clothMask(g, '#fbfbfc', '#d3d7de', '#c7ccd4', '#c7ccd4'); },
+  'mask-blue'(g) { clothMask(g, '#a9d8ef', '#7fbbdc', '#6fb2d6'); },
+  'mask-pink'(g) { clothMask(g, '#f7b3c9', '#e58aab', '#d97a9c'); },
+  'mask-black'(g) { clothMask(g, '#2b2d33', '#45484f', '#2b2d33'); },
 };
-const STAMPS = [...EMOJIS, ...Object.keys(DRAWN)];
+const DRAWN_ROWS = [
+  ['mask-white', 'mask-blue', 'mask-pink', 'mask-black'],
+  ['eyemask', 'eyemask-sleep', 'eyemask-wink', 'eyemask-teary'],
+  ['sg-black', 'sg-round'],
+];
 const COLORS = ['#1e2430','#ffffff','#f6a5c0','#ffd54a','#8fc7ff','#7a5a45'];
 const BLUR_N = [16, 12, 9, 7, 5];     // 短い辺をいくつに分けるか（少ないほど強い）
 const MOSAIC_N = [16, 12, 9, 6, 4];
@@ -636,14 +638,16 @@ cv.addEventListener('pointercancel', endDrag);
 // ---------- パネル ----------
 const colorsEl = $('#colors'), emojisEl = $('#emojis');
 COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + c); colorsEl.append(b); });
-const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'eyemask-sleep': '寝ている目のアイマスク', 'eyemask-wink': 'ウインクのアイマスク', 'eyemask-teary': 'ウルウルした目のアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-black': '黒いマスク' };
-STAMPS.forEach(em => {
-  const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em;
-  if (DRAWN[em]) {
-    const im = new Image(); im.alt = ''; im.src = emojiImage(em).toDataURL();
-    b.append(im); b.setAttribute('aria-label', STAMP_NAMES[em]); b.classList.add('drawn');
-  } else b.textContent = em;
+const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'eyemask-sleep': '寝ている目のアイマスク', 'eyemask-wink': 'ウインクのアイマスク', 'eyemask-teary': 'ウルウルした目のアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-pink': 'ピンクのマスク', 'mask-black': '黒いマスク' };
+EMOJIS.forEach(em => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em; b.textContent = em;
   emojisEl.append(b);
+});
+DRAWN_ROWS.flat().forEach(key => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = key;
+  const im = new Image(); im.alt = ''; im.src = emojiImage(key).toDataURL();
+  b.append(im); b.setAttribute('aria-label', STAMP_NAMES[key]);
+  $('#drawn-stamps').append(b);
 });
 
 function change(prop, val) {
@@ -659,7 +663,7 @@ function change(prop, val) {
 $('#kinds').addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('kind', b.dataset.kind); });
 $('#shapes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('shape', b.dataset.shape); });
 colorsEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('color', b.dataset.color); });
-emojisEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('emoji', b.dataset.emoji); });
+$('#g-emoji').addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('emoji', b.dataset.emoji); });
 $('#strength').addEventListener('input', e => {
   st.strength = +e.target.value;
   if (sel) { if (!drag) drag = { mode: 'slider', before: snap() }; sel.strength = st.strength; draw(); }
@@ -693,7 +697,7 @@ function updatePanel() {
   document.querySelectorAll('#kinds button').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === st.kind));
   document.querySelectorAll('#shapes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.shape === st.shape));
   colorsEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.color === st.color));
-  emojisEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.emoji === st.emoji));
+  $('#g-emoji').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.emoji === st.emoji));
   $('#strength').value = st.strength;
   $('#g-shape').hidden = st.kind === 'stamp';
   $('#g-strength').hidden = !(st.kind === 'blur' || st.kind === 'mosaic');
