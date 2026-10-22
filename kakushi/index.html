@@ -64,7 +64,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .swatches{display:flex;gap:8px;flex-wrap:wrap}
 .swatches button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
 .swatches button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
-.emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.emojis{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .emojis button{font-size:24px;line-height:1;padding:6px 0;border-radius:10px;border:1.5px solid transparent;background:var(--soft)}
 .emojis button.drawn{display:flex;align-items:center;justify-content:center;padding:4px}
 .emojis button.drawn img{width:100%;max-width:40px;height:26px;object-fit:contain}
@@ -204,6 +204,62 @@ function pleatedMask(g, fill, edge, pleat) {
   g.strokeStyle = pleat; g.lineWidth = 5; g.lineCap = 'round';
   for (const y of [285, 325, 365]) { g.beginPath(); g.moveTo(178, y); g.quadraticCurveTo(320, y + 10, 462, y); g.stroke(); }
 }
+// アイマスクの布とゴムひも。目は種類ごとに上から描く（左目 x=202、右目 x=438、高さ y=318）
+function eyeMaskBody(g, fill, edge, strap) {
+  g.strokeStyle = strap; g.lineWidth = 14; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(40, 292); g.lineTo(600, 292); g.stroke();
+  const body = () => {
+    g.beginPath(); g.moveTo(320, 262);
+    g.bezierCurveTo(250, 222, 120, 222, 92, 262); g.bezierCurveTo(62, 305, 80, 385, 150, 398);
+    g.bezierCurveTo(215, 410, 270, 392, 320, 368); g.bezierCurveTo(370, 392, 425, 410, 490, 398);
+    g.bezierCurveTo(560, 385, 578, 305, 548, 262); g.bezierCurveTo(520, 222, 390, 222, 320, 262);
+  };
+  body(); g.fillStyle = fill; g.fill();
+  g.lineWidth = 6; g.strokeStyle = edge; g.stroke();
+  g.save(); g.translate(320, 315); g.scale(0.9, 0.86); g.translate(-320, -315);  // ふちのステッチ
+  body(); g.restore();
+  g.setLineDash([10, 9]); g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.stroke(); g.setLineDash([]);
+}
+const LASH = '#2a1f2e';
+function lashes(g, ex, ey, dir, down) {  // 目じりのまつげ（down なら下向き＝閉じた目）
+  g.strokeStyle = LASH; g.lineWidth = 7; g.lineCap = 'round';
+  for (const [dx, dy] of [[14, -12], [20, 0], [18, 12]]) {
+    g.beginPath(); g.moveTo(ex, ey + dy * 0.4 * (down ? -1 : 1)); g.lineTo(ex + dir * dx, ey + (dy - 6) * (down ? -1 : 1)); g.stroke();
+  }
+}
+function openEye(g, x, dir, big) {  // ぱっちり開いた目。big ならウルウル
+  const y = 318, k = big ? 1.08 : 1;
+  g.beginPath(); g.ellipse(x, y, 50 * k, 56 * k, 0, 0, Math.PI * 2); g.fillStyle = '#ffffff'; g.fill();
+  const gr = g.createLinearGradient(0, y - 46, 0, y + 54);
+  gr.addColorStop(0, big ? '#1d2a4a' : '#2c1d3a'); gr.addColorStop(1, big ? '#5aa8e6' : '#8c62c4');
+  g.beginPath(); g.ellipse(x, y + 4, 40 * k, 49 * k, 0, 0, Math.PI * 2); g.fillStyle = gr; g.fill();
+  g.beginPath(); g.ellipse(x, y + 6, 16, 20, 0, 0, Math.PI * 2); g.fillStyle = '#141020'; g.fill();
+  g.fillStyle = '#ffffff';
+  if (big) {  // 光をたくさん入れて、下に涙の水面を描く
+    g.beginPath(); g.ellipse(x - 14, y - 16, 18, 15, -0.4, 0, Math.PI * 2); g.fill();
+    for (const [dx, dy, r] of [[16, -24, 7], [18, 20, 8], [-18, 26, 5], [2, 34, 4]]) { g.beginPath(); g.arc(x + dx, y + dy, r, 0, Math.PI * 2); g.fill(); }
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(x - 36, y + 30);
+    for (let i = 1; i <= 6; i++) g.quadraticCurveTo(x - 36 + i * 12 - 6, y + 30 + (i % 2 ? 6 : -6), x - 36 + i * 12, y + 30);
+    g.stroke();
+  } else {
+    g.beginPath(); g.arc(x - 14, y - 16, 14, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(x + 14, y + 22, 6, 0, Math.PI * 2); g.fill();
+  }
+  g.strokeStyle = LASH; g.lineCap = 'round'; g.lineWidth = 10;  // 上まぶた
+  g.beginPath(); g.ellipse(x, y + 2, 56 * k, 62 * k, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+  lashes(g, x + dir * 50 * k, y - 30 * k, dir, false);
+}
+function closedEye(g, x, dir, happy) {  // 閉じた目。happy なら ^ の形（ウインク）、そうでなければ眠っている目
+  const y = happy ? 322 : 312;
+  g.strokeStyle = LASH; g.lineWidth = 10; g.lineCap = 'round';
+  g.beginPath();
+  if (happy) g.ellipse(x, y + 18, 46, 36, 0, Math.PI * 1.15, Math.PI * 1.85);
+  else g.ellipse(x, y - 14, 48, 34, 0, Math.PI * 0.15, Math.PI * 0.85);
+  g.stroke();
+  if (happy) lashes(g, x + dir * 42, y - 4, dir, false);
+  else lashes(g, x + dir * 42, y + 6, dir, true);
+}
 const DRAWN = {
   'sg-black'(g) {  // 黒いサングラス
     g.fillStyle = '#16171a';
@@ -224,34 +280,29 @@ const DRAWN = {
     }
   },
   'eyemask'(g) {  // お目目ぱっちりのアイマスク
-    g.strokeStyle = '#8a5a6e'; g.lineWidth = 14; g.lineCap = 'round';  // ゴムひも
-    g.beginPath(); g.moveTo(40, 292); g.lineTo(600, 292); g.stroke();
-    const body = () => {
-      g.beginPath(); g.moveTo(320, 262);
-      g.bezierCurveTo(250, 222, 120, 222, 92, 262); g.bezierCurveTo(62, 305, 80, 385, 150, 398);
-      g.bezierCurveTo(215, 410, 270, 392, 320, 368); g.bezierCurveTo(370, 392, 425, 410, 490, 398);
-      g.bezierCurveTo(560, 385, 578, 305, 548, 262); g.bezierCurveTo(520, 222, 390, 222, 320, 262);
-    };
-    body(); g.fillStyle = '#f9c0d3'; g.fill();
-    g.lineWidth = 6; g.strokeStyle = '#e58aab'; g.stroke();
-    g.save(); g.translate(320, 315); g.scale(0.9, 0.86); g.translate(-320, -315);  // ふちのステッチ
-    body(); g.restore();
-    g.setLineDash([10, 9]); g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.stroke(); g.setLineDash([]);
-    for (const [x, dir] of [[202, -1], [438, 1]]) {
-      const y = 318;
-      g.beginPath(); g.ellipse(x, y, 50, 56, 0, 0, Math.PI * 2); g.fillStyle = '#ffffff'; g.fill();
-      const gr = g.createLinearGradient(0, y - 44, 0, y + 50);
-      gr.addColorStop(0, '#2c1d3a'); gr.addColorStop(1, '#8c62c4');
-      g.beginPath(); g.ellipse(x, y + 4, 38, 47, 0, 0, Math.PI * 2); g.fillStyle = gr; g.fill();
-      g.beginPath(); g.ellipse(x, y + 6, 16, 20, 0, 0, Math.PI * 2); g.fillStyle = '#1a1022'; g.fill();
-      g.fillStyle = '#ffffff';
-      g.beginPath(); g.arc(x - 14, y - 16, 14, 0, Math.PI * 2); g.fill();
-      g.beginPath(); g.arc(x + 14, y + 22, 6, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = '#2a1f2e'; g.lineCap = 'round';  // 上まぶたとまつげ
-      g.lineWidth = 10; g.beginPath(); g.ellipse(x, y + 2, 56, 62, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
-      g.lineWidth = 7;
-      const ex = x + dir * 50, ey = y - 30;
-      for (const [dx, dy] of [[14, -12], [20, 0], [18, 12]]) { g.beginPath(); g.moveTo(ex, ey + dy * 0.4); g.lineTo(ex + dir * dx, ey + dy - 6); g.stroke(); }
+    eyeMaskBody(g, '#f9c0d3', '#e58aab', '#8a5a6e');
+    openEye(g, 202, -1); openEye(g, 438, 1);
+  },
+  'eyemask-sleep'(g) {  // 寝ている目のアイマスク
+    eyeMaskBody(g, '#cfc2f2', '#a58fe0', '#6e5a9a');
+    closedEye(g, 202, -1); closedEye(g, 438, 1);
+    g.fillStyle = '#6e5a9a'; g.font = 'bold 34px sans-serif'; g.textAlign = 'center';
+    g.fillText('z', 300, 296); g.font = 'bold 26px sans-serif'; g.fillText('z', 330, 278);
+  },
+  'eyemask-wink'(g) {  // ウインクのアイマスク
+    eyeMaskBody(g, '#ffe39a', '#efb948', '#9a7330');
+    openEye(g, 202, -1); closedEye(g, 438, 1, true);
+    g.fillStyle = '#ff6f9c';  // 目じりの小さな星
+    g.beginPath();
+    for (let i = 0; i < 10; i++) { const r = i % 2 ? 7 : 17, t = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(510 + r * Math.cos(t), 362 + r * Math.sin(t)); }
+    g.fill();
+  },
+  'eyemask-teary'(g) {  // ウルウルした目のアイマスク
+    eyeMaskBody(g, '#c4e6f8', '#85c2e5', '#4f7f9c');
+    openEye(g, 202, -1, true); openEye(g, 438, 1, true);
+    g.fillStyle = '#7cc4f0';  // 涙のしずく
+    for (const x of [148, 492]) {
+      g.beginPath(); g.moveTo(x, 352); g.quadraticCurveTo(x + 13, 375, x, 384); g.quadraticCurveTo(x - 13, 375, x, 352); g.fill();
     }
   },
   'mask-white'(g) { pleatedMask(g, '#fbfbfc', '#c7ccd4', '#dde1e7'); },
@@ -585,7 +636,7 @@ cv.addEventListener('pointercancel', endDrag);
 // ---------- パネル ----------
 const colorsEl = $('#colors'), emojisEl = $('#emojis');
 COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + c); colorsEl.append(b); });
-const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-black': '黒いマスク' };
+const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'eyemask-sleep': '寝ている目のアイマスク', 'eyemask-wink': 'ウインクのアイマスク', 'eyemask-teary': 'ウルウルした目のアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-black': '黒いマスク' };
 STAMPS.forEach(em => {
   const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em;
   if (DRAWN[em]) {
