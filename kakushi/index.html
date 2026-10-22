@@ -38,8 +38,13 @@ canvas#cv{display:block;touch-action:none;cursor:crosshair;border-radius:3px;box
 /* 写真のすぐ下の操作バー（スマホで下までスクロールしなくていいように）。写真にはかぶせない */
 .quickbar{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:5px;
   display:grid;gap:5px;min-width:0;min-height:52px;align-content:center}
-.qb-empty{margin:0;padding:4px 8px;font-size:.85rem;color:var(--muted)}
-.qb-row{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.quickbar .qb-del:disabled{opacity:.35;cursor:default}
+.quickbar .qb-toggle{margin-left:auto;color:var(--muted);font-size:.78rem;gap:2px;white-space:nowrap;padding:0 4px}
+.qb-row [data-qkind]{min-width:36px;padding:0 4px}
+.quickbar .qb-del{padding:0 6px 0 4px;white-space:nowrap}
+.qb-show{justify-self:start;display:flex;align-items:center;gap:2px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+  border-radius:10px;height:34px;padding:0 10px;font-size:.8rem}
+.qb-row{display:flex;align-items:center;gap:3px}
 .quickbar button{border:1.5px solid transparent;background:transparent;border-radius:10px;min-width:40px;height:40px;
   display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6px;font-size:.85rem}
 .quickbar button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -116,8 +121,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <span class="badge" id="badge">見本の画像です</span>
     </div>
     <div class="quickbar" id="quickbar">
-      <p class="qb-empty" id="qb-empty">隠した場所をタップして選ぶと、ここで消したり、ほかのかくし方やスタンプに変えたりできます。</p>
-      <div class="qb-row" id="qb-tools" hidden>
+      <div class="qb-row" id="qb-tools">
         <button type="button" class="qb-del" id="qb-del" aria-label="選んだ所を消す">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>消す
         </button>
@@ -126,9 +130,15 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <button type="button" data-qkind="mosaic" aria-label="モザイクに変える"><span class="ico mosaic"></span></button>
         <button type="button" data-qkind="fill" aria-label="ぬりつぶしに変える"><span class="ico fill"></span></button>
         <button type="button" data-qkind="stamp" aria-label="スタンプに変える"><span class="ico stamp">😊</span></button>
+        <button type="button" class="qb-toggle" id="qb-hide">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを隠す
+        </button>
       </div>
       <div class="qb-stamps" id="qb-stamps" hidden></div>
     </div>
+    <button type="button" class="qb-show qb-toggle" id="qb-show" hidden>
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを出す
+    </button>
     <p class="hint">隠したいところを<b>指やマウスでなぞって囲む</b>か、<b>タップ</b>してください。隠した場所はドラッグで動かせて、角をつまむと大きさを変えられます。</p>
   </div>
 
@@ -749,20 +759,29 @@ const qb = $('#quickbar'), qbStamps = $('#qb-stamps');
   } else b.textContent = key;
   qbStamps.append(b);
 });
-function placeQuickbar() {  // 選んでいるときは道具、選んでいないときは案内を出す
-  $('#qb-empty').hidden = !!sel;
-  $('#qb-tools').hidden = !sel;
-  qbStamps.hidden = !sel || sel.kind !== 'stamp' || !qbStampsOpen;
-  if (!sel) return;
-  qb.querySelectorAll('[data-qkind]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qkind === sel.kind));
-  qbStamps.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qemoji === sel.emoji));
+function placeQuickbar() {  // 選んでいないときも出しておき、次に置くかくし方やスタンプを選べるようにする
+  qb.hidden = qbHidden; $('#qb-show').hidden = !qbHidden;
+  $('#qb-del').disabled = !sel;
+  qbStamps.hidden = st.kind !== 'stamp' || !qbStampsOpen;
+  qb.querySelectorAll('[data-qkind]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qkind === st.kind));
+  qbStamps.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qemoji === st.emoji));
 }
+let qbHidden = false;
+try { qbHidden = localStorage.getItem('kakushi-bar-hidden') === '1'; } catch (e) {}
+function setQbHidden(v) {
+  qbHidden = v;
+  try { localStorage.setItem('kakushi-bar-hidden', v ? '1' : '0'); } catch (e) {}
+  placeQuickbar();
+  (v ? $('#qb-show') : $('#qb-hide')).focus();
+}
+$('#qb-show').addEventListener('click', () => setQbHidden(false));
 let qbStampsOpen = true;
 qb.addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || !sel) return;
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'qb-hide') { setQbHidden(true); return; }
   if (b.id === 'qb-del') { removeSel(); return; }
   if (b.dataset.qkind) {
-    if (b.dataset.qkind === 'stamp' && sel.kind === 'stamp') qbStampsOpen = !qbStampsOpen;  // もう一度押すとスタンプの列を開け閉め
+    if (b.dataset.qkind === 'stamp' && st.kind === 'stamp') qbStampsOpen = !qbStampsOpen;  // もう一度押すとスタンプの列を開け閉め
     else { if (b.dataset.qkind === 'stamp') qbStampsOpen = true; change('kind', b.dataset.qkind); }
     placeQuickbar();
   }
