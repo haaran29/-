@@ -58,8 +58,11 @@ canvas#cv{display:block;touch-action:pan-x pan-y pinch-zoom;cursor:default;borde
 .qb-stamps{display:flex;gap:3px;overflow-x:auto;touch-action:pan-x;max-width:100%;padding-bottom:2px;scrollbar-width:thin}
 .qb-stamps button{flex:0 0 auto;font-size:22px;background:var(--soft)}
 .qb-stamps img{height:24px;width:auto;max-width:52px}
-.qb-colors{display:flex;gap:6px;flex-wrap:wrap;padding:2px 4px}
-.quickbar .qb-colors button{width:36px;min-width:36px;height:36px;border-radius:50%;border:2px solid var(--line);padding:0}
+.qb-opts{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.quickbar .qb-opts .ico.ellipse{width:22px;height:22px}
+.quickbar .qb-opts .ico.rect{width:26px;height:20px}
+.qb-colors{display:flex;gap:5px;flex-wrap:wrap;padding:2px 4px}
+.quickbar .qb-colors button{width:32px;min-width:32px;height:32px;border-radius:50%;border:2px solid var(--line);padding:0}
 .quickbar .qb-colors button[aria-pressed="true"]{border-color:var(--line);box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
 .hint{margin:0;color:var(--muted);font-size:.88rem}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:18px;min-width:0}
@@ -145,7 +148,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <button type="button" id="qb-cancel">やめる</button>
       </div>
       <div class="qb-stamps" id="qb-stamps" hidden></div>
-      <div class="qb-colors" id="qb-colors" hidden></div>
+      <div class="qb-opts" id="qb-opts" hidden>
+        <button type="button" data-qshape="ellipse" aria-label="丸にする"><span class="ico ellipse"></span></button>
+        <button type="button" data-qshape="rect" aria-label="四角にする"><span class="ico rect"></span></button>
+        <span class="qb-sep" id="qb-colors-sep"></span>
+        <div class="qb-colors" id="qb-colors" hidden></div>
+      </div>
     </div>
     <button type="button" class="qb-show qb-toggle" id="qb-show" hidden>
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを出す
@@ -722,7 +730,7 @@ function setArmed(v) {
 }
 // 何も選んでいないときにかくし方やスタンプを押したら、次の1回を置く準備をする
 function change(prop, val) {
-  if (!sel && (prop === 'kind' || prop === 'emoji' || prop === 'color')) armed = true;
+  if (!sel && (prop === 'kind' || prop === 'emoji' || prop === 'color' || prop === 'shape')) armed = true;
   const before = snap();
   st[prop] = val;
   if (sel) {
@@ -806,7 +814,9 @@ function placeQuickbar() {  // 選んでいないときも出しておき、次�
   qb.hidden = qbHidden; $('#qb-show').hidden = !qbHidden;
   $('#qb-del').disabled = !sel;
   qbStamps.hidden = st.kind !== 'stamp' || !qbStampsOpen;
-  qbColors.hidden = st.kind !== 'fill';
+  $('#qb-opts').hidden = st.kind === 'stamp';  // 丸・四角はぼかし・モザイク・ぬりつぶしで選べる
+  qb.querySelectorAll('[data-qshape]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qshape === st.shape));
+  qbColors.hidden = $('#qb-colors-sep').hidden = st.kind !== 'fill';
   qbColors.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qcolor === st.color));
   qb.querySelectorAll('[data-qkind]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qkind === st.kind));
   qbStamps.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qemoji === st.emoji));
@@ -833,6 +843,7 @@ qb.addEventListener('click', e => {
   }
   if (b.dataset.qemoji) change('emoji', b.dataset.qemoji);
   if (b.dataset.qcolor) change('color', b.dataset.qcolor);
+  if (b.dataset.qshape) change('shape', b.dataset.qshape);
 });
 
 // ---------- 保存 ----------
