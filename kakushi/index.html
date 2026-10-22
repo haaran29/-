@@ -66,7 +66,7 @@ canvas#cv{display:block;touch-action:pan-x pan-y pinch-zoom;cursor:default;borde
 .qb-colors{display:flex;gap:5px;flex-wrap:wrap;padding:2px 4px}
 .quickbar .qb-colors button{width:32px;min-width:32px;height:32px;border-radius:50%;border:2px solid var(--line);padding:0}
 .quickbar .qb-colors button[aria-pressed="true"]{border-color:var(--line);box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
-.hint{margin:0;color:var(--muted);font-size:.88rem}
+.hint{grid-column:1/-1;margin:0;color:var(--muted);font-size:.88rem;max-width:62em}  /* 使い方の説明はページの一番下 */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:18px;min-width:0}
 .group{display:grid;gap:8px}
 button,.filebtn{font:inherit;color:inherit;cursor:pointer}
@@ -147,7 +147,6 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:3px solid
     <button type="button" class="qb-show qb-toggle" id="qb-show" hidden>
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを出す
     </button>
-    <p class="hint"><b>かくし方やスタンプを選んでから</b>、隠したいところをタップするか、なぞって囲んでください。隠した場所はタップで選ぶと、ドラッグで動かしたり、角をつまんで大きさを変えたりできます。何も選んでいないときは、写真の上でもスクロールできます。</p>
   </div>
 
   <aside class="panel">
@@ -166,6 +165,8 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:3px solid
     <button type="button" class="primary" id="save">隠した写真を保存</button>
     <p class="note">写真はこの画面の中だけで処理され、どこにも送られません。保存した画像には撮影場所などの情報は残りません。</p>
   </aside>
+
+  <p class="hint"><b>かくし方やスタンプを選んでから</b>、隠したいところをタップするか、なぞって囲んでください。隠した場所はタップで選ぶと、ドラッグで動かしたり、角をつまんで大きさを変えたりできます。何も選んでいないときは、写真の上でもスクロールできます。</p>
 </div>
 
 <div class="sheet" id="sheet" hidden>
