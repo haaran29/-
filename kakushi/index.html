@@ -58,6 +58,9 @@ canvas#cv{display:block;touch-action:pan-x pan-y pinch-zoom;cursor:default;borde
 .qb-stamps{display:flex;gap:3px;overflow-x:auto;touch-action:pan-x;max-width:100%;padding-bottom:2px;scrollbar-width:thin}
 .qb-stamps button{flex:0 0 auto;font-size:22px;background:var(--soft)}
 .qb-stamps img{height:24px;width:auto;max-width:52px}
+.qb-colors{display:flex;gap:6px;flex-wrap:wrap;padding:2px 4px}
+.quickbar .qb-colors button{width:36px;min-width:36px;height:36px;border-radius:50%;border:2px solid var(--line);padding:0}
+.quickbar .qb-colors button[aria-pressed="true"]{border-color:var(--line);box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
 .hint{margin:0;color:var(--muted);font-size:.88rem}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:18px;min-width:0}
 .group{display:grid;gap:8px}
@@ -142,6 +145,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <button type="button" id="qb-cancel">やめる</button>
       </div>
       <div class="qb-stamps" id="qb-stamps" hidden></div>
+      <div class="qb-colors" id="qb-colors" hidden></div>
     </div>
     <button type="button" class="qb-show qb-toggle" id="qb-show" hidden>
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを出す
@@ -368,6 +372,7 @@ const DRAWN_ROWS = [
   ['sg-black', 'sg-round'],
 ];
 const COLORS = ['#1e2430','#ffffff','#f6a5c0','#ffd54a','#8fc7ff','#7a5a45'];
+const COLOR_NAMES = { '#1e2430': '黒', '#ffffff': '白', '#f6a5c0': 'ピンク', '#ffd54a': '黄色', '#8fc7ff': '水色', '#7a5a45': '茶色' };
 const BLUR_N = [16, 12, 9, 7, 5];     // 短い辺をいくつに分けるか（少ないほど強い）
 const MOSAIC_N = [16, 12, 9, 6, 4];
 
@@ -696,7 +701,7 @@ cv.addEventListener('pointercancel', endDrag);
 
 // ---------- パネル ----------
 const colorsEl = $('#colors'), emojisEl = $('#emojis');
-COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + c); colorsEl.append(b); });
+COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + COLOR_NAMES[c]); colorsEl.append(b); });
 const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'eyemask-sleep': '寝ている目のアイマスク', 'eyemask-wink': 'ウインクのアイマスク', 'eyemask-teary': 'ウルウルした目のアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-pink': 'ピンクのマスク', 'mask-black': '黒いマスク' };
 EMOJIS.forEach(em => {
   const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em; b.textContent = em;
@@ -717,7 +722,7 @@ function setArmed(v) {
 }
 // 何も選んでいないときにかくし方やスタンプを押したら、次の1回を置く準備をする
 function change(prop, val) {
-  if (!sel && (prop === 'kind' || prop === 'emoji')) armed = true;
+  if (!sel && (prop === 'kind' || prop === 'emoji' || prop === 'color')) armed = true;
   const before = snap();
   st[prop] = val;
   if (sel) {
@@ -779,7 +784,12 @@ function updatePanel() {
 }
 
 // ---------- 写真の上の操作バー ----------
-const qb = $('#quickbar'), qbStamps = $('#qb-stamps');
+const qb = $('#quickbar'), qbStamps = $('#qb-stamps'), qbColors = $('#qb-colors');
+COLORS.forEach(c => {  // ぬりつぶしの色もスタンプと同じようにバーで選べるようにする
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.qcolor = c; b.style.background = c;
+  b.setAttribute('aria-label', 'ぬりつぶしの色 ' + COLOR_NAMES[c]);
+  qbColors.append(b);
+});
 [...EMOJIS, ...DRAWN_ROWS.flat()].forEach(key => {
   const b = document.createElement('button'); b.type = 'button'; b.dataset.qemoji = key;
   if (DRAWN[key]) {
@@ -796,6 +806,8 @@ function placeQuickbar() {  // 選んでいないときも出しておき、次�
   qb.hidden = qbHidden; $('#qb-show').hidden = !qbHidden;
   $('#qb-del').disabled = !sel;
   qbStamps.hidden = st.kind !== 'stamp' || !qbStampsOpen;
+  qbColors.hidden = st.kind !== 'fill';
+  qbColors.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qcolor === st.color));
   qb.querySelectorAll('[data-qkind]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qkind === st.kind));
   qbStamps.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qemoji === st.emoji));
 }
@@ -820,6 +832,7 @@ qb.addEventListener('click', e => {
     placeQuickbar();
   }
   if (b.dataset.qemoji) change('emoji', b.dataset.qemoji);
+  if (b.dataset.qcolor) change('color', b.dataset.qcolor);
 });
 
 // ---------- 保存 ----------
