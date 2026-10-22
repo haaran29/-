@@ -31,8 +31,8 @@ header p{margin:0;color:var(--muted);font-size:.9rem}
 .stage-wrap{min-width:0;display:grid;gap:10px}
 .stage{position:relative;background:var(--stage);border-radius:16px;padding:12px;min-height:260px;
   display:flex;align-items:center;justify-content:center;overflow:hidden}
-.stage.drop{outline:3px dashed var(--accent);outline-offset:-8px}
-canvas#cv{display:block;touch-action:none;cursor:crosshair;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.18);max-width:100%}
+.stage.drop,.stage.armed{outline:3px dashed var(--accent);outline-offset:-8px}
+canvas#cv{display:block;touch-action:pan-x pan-y pinch-zoom;cursor:default;border-radius:3px;box-shadow:0 2px 10px rgba(0,0,0,.18);max-width:100%}
 .badge{position:absolute;bottom:20px;left:20px;background:var(--panel);color:var(--ink);font-size:.8rem;
   padding:3px 10px;border-radius:99px;box-shadow:0 1px 4px rgba(0,0,0,.2);pointer-events:none}
 /* 写真のすぐ下の操作バー（スマホで下までスクロールしなくていいように）。写真にはかぶせない */
@@ -42,6 +42,9 @@ canvas#cv{display:block;touch-action:none;cursor:crosshair;border-radius:3px;box
 .quickbar .qb-toggle{margin-left:auto;color:var(--muted);font-size:.78rem;gap:2px;white-space:nowrap;padding:0 4px}
 .qb-row [data-qkind]{min-width:36px;padding:0 4px}
 .quickbar .qb-del{padding:0 6px 0 4px;white-space:nowrap}
+.qb-armed{display:flex;align-items:center;gap:8px;padding:2px 4px 2px 8px;font-size:.82rem;color:var(--accent);font-weight:700}
+.qb-armed span{flex:1;min-width:0}
+.quickbar .qb-armed button{border-color:var(--line);background:var(--soft);color:var(--ink);font-weight:400;height:32px;flex:0 0 auto}
 .qb-show{justify-self:start;display:flex;align-items:center;gap:2px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
   border-radius:10px;height:34px;padding:0 10px;font-size:.8rem}
 .qb-row{display:flex;align-items:center;gap:3px}
@@ -134,12 +137,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを隠す
         </button>
       </div>
+      <div class="qb-armed" id="qb-armed" hidden>
+        <span>写真をタップかなぞると置きます</span>
+        <button type="button" id="qb-cancel">やめる</button>
+      </div>
       <div class="qb-stamps" id="qb-stamps" hidden></div>
     </div>
     <button type="button" class="qb-show qb-toggle" id="qb-show" hidden>
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>バーを出す
     </button>
-    <p class="hint">隠したいところを<b>指やマウスでなぞって囲む</b>か、<b>タップ</b>してください。隠した場所はドラッグで動かせて、角をつまむと大きさを変えられます。</p>
+    <p class="hint"><b>かくし方やスタンプを選んでから</b>、隠したいところをタップするか、なぞって囲んでください。隠した場所はタップで選ぶと、ドラッグで動かしたり、角をつまんで大きさを変えたりできます。何も選んでいないときは、写真の上でもスクロールできます。</p>
   </div>
 
   <aside class="panel">
@@ -610,10 +617,13 @@ function select(r) {
   updatePanel(); draw();
 }
 
+// 置くのは「置く準備」をしたときだけ（armed）。ただ触っただけでは何も置かない
 cv.addEventListener('pointerdown', e => {
   if (!src) return;
-  cv.setPointerCapture(e.pointerId);
   const p = pt(e), before = snap();
+  // 何も選んでいない指の操作はスクロールかもしれないので、指を離すまで何もしない
+  if (!sel && !armed && e.pointerType !== 'mouse') { drag = { mode: 'tap', p, cx: e.clientX, cy: e.clientY }; return; }
+  cv.setPointerCapture(e.pointerId);
   const h = handleAt(p);
   if (h >= 0) {
     const [ax, ay] = corners(sel)[3 - h];
@@ -621,13 +631,13 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   const r = hit(p);
-  if (r) {
+  if (r && !armed) {
     regions.splice(regions.indexOf(r), 1); regions.push(r);  // 選んだものを一番上に
     select(r);
     drag = { mode: 'move', r, ox: p.x - r.x, oy: p.y - r.y, before };
     return;
   }
-  drag = { mode: 'new', sx: p.x, sy: p.y, r: null, hadSel: !!sel, before };
+  drag = armed ? { mode: 'new', sx: p.x, sy: p.y, r: null, before } : { mode: 'tap', p, cx: e.clientX, cy: e.clientY };
 });
 
 cv.addEventListener('pointermove', e => {
@@ -636,10 +646,11 @@ cv.addEventListener('pointermove', e => {
   if (!drag) {
     if (e.pointerType === 'mouse') {
       const h = handleAt(p);
-      cv.style.cursor = h === 0 || h === 3 ? 'nwse-resize' : h > 0 ? 'nesw-resize' : hit(p) ? 'move' : 'crosshair';
+      cv.style.cursor = h === 0 || h === 3 ? 'nwse-resize' : h > 0 ? 'nesw-resize' : armed ? 'crosshair' : hit(p) ? 'move' : 'default';
     }
     return;
   }
+  if (drag.mode === 'tap') { if (Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) > 10) drag.moved = true; return; }
   const min = 14 / cssScale;
   if (drag.mode === 'move') {
     drag.r.x = p.x - drag.ox; drag.r.y = p.y - drag.oy;
@@ -662,12 +673,21 @@ cv.addEventListener('pointermove', e => {
 function endDrag(e) {
   if (!drag) return;
   const d = drag; drag = null;
-  if (d.mode === 'new' && !d.r && e.type === 'pointerup') {
-    if (d.hadSel) { select(null); return; }
-    const s = Math.min(iw, ih) * 0.18;  // タップだけなら、その場所に丸を置く
-    const r = newRegion(d.sx - s / 2, d.sy - s / 2, s, s);
-    if (r.kind === 'stamp') fitStampBox(r);
-    regions.push(r); select(r);
+  if (d.mode === 'tap') {  // 指を動かさずに離したときだけ、選ぶ・選ぶのをやめる
+    if (e.type !== 'pointerup' || d.moved) return;
+    const r = hit(d.p);
+    if (r) { regions.splice(regions.indexOf(r), 1); regions.push(r); select(r); }
+    else if (sel) select(null);
+    return;
+  }
+  if (d.mode === 'new') {
+    if (!d.r && e.type === 'pointerup') {
+      const s = Math.min(iw, ih) * 0.18;  // タップだけなら、その場所に置く
+      const r = newRegion(d.sx - s / 2, d.sy - s / 2, s, s);
+      if (r.kind === 'stamp') fitStampBox(r);
+      regions.push(r); select(r);
+    }
+    if (d.r || e.type === 'pointerup') setArmed(false);  // 1回置いたら準備はおしまい
   }
   commit(d.before); draw();
 }
@@ -689,7 +709,15 @@ DRAWN_ROWS.flat().forEach(key => {
   $('#drawn-stamps').append(b);
 });
 
+let armed = false;
+function setArmed(v) {
+  armed = v;
+  if (v && sel) { sel = null; draw(); }
+  updatePanel();
+}
+// 何も選んでいないときにかくし方やスタンプを押したら、次の1回を置く準備をする
 function change(prop, val) {
+  if (!sel && (prop === 'kind' || prop === 'emoji')) armed = true;
   const before = snap();
   st[prop] = val;
   if (sel) {
@@ -729,7 +757,8 @@ document.addEventListener('keydown', e => {
   if (e.target.closest('input') || !$('#sheet').hidden) return;
   if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); removeSel(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
-  if (e.key === 'Escape' && sel) select(null);
+  if (e.key === 'Escape' && armed) setArmed(false);
+  else if (e.key === 'Escape' && sel) select(null);
 });
 
 function updatePanel() {
@@ -760,6 +789,10 @@ const qb = $('#quickbar'), qbStamps = $('#qb-stamps');
   qbStamps.append(b);
 });
 function placeQuickbar() {  // 選んでいないときも出しておき、次に置くかくし方やスタンプを選べるようにする
+  $('#qb-armed').hidden = !armed;
+  stage.classList.toggle('armed', armed);
+  // 選んでいるときと置く準備中は、写真の上の指の動きを操作に使う。それ以外は写真の上でもスクロールできる
+  cv.style.touchAction = sel || armed ? 'none' : 'pan-x pan-y pinch-zoom';
   qb.hidden = qbHidden; $('#qb-show').hidden = !qbHidden;
   $('#qb-del').disabled = !sel;
   qbStamps.hidden = st.kind !== 'stamp' || !qbStampsOpen;
@@ -779,6 +812,7 @@ let qbStampsOpen = true;
 qb.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.id === 'qb-hide') { setQbHidden(true); return; }
+  if (b.id === 'qb-cancel') { setArmed(false); return; }
   if (b.id === 'qb-del') { removeSel(); return; }
   if (b.dataset.qkind) {
     if (b.dataset.qkind === 'stamp' && st.kind === 'stamp') qbStampsOpen = !qbStampsOpen;  // もう一度押すとスタンプの列を開け閉め
