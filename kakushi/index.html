@@ -61,13 +61,14 @@ canvas#cv{display:block;touch-action:pan-x pan-y pinch-zoom;cursor:default;borde
 .qb-opts{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
 .quickbar .qb-opts .ico.ellipse{width:22px;height:22px}
 .quickbar .qb-opts .ico.rect{width:26px;height:20px}
+.qb-strength{display:flex;align-items:center;gap:6px;flex:1;min-width:120px;max-width:280px;padding:0 6px;font-size:.8rem;color:var(--muted)}
+.qb-strength input{flex:1;min-width:0;accent-color:var(--accent)}
 .qb-colors{display:flex;gap:5px;flex-wrap:wrap;padding:2px 4px}
 .quickbar .qb-colors button{width:32px;min-width:32px;height:32px;border-radius:50%;border:2px solid var(--line);padding:0}
 .quickbar .qb-colors button[aria-pressed="true"]{border-color:var(--line);box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
 .hint{margin:0;color:var(--muted);font-size:.88rem}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:18px;min-width:0}
 .group{display:grid;gap:8px}
-.label{font-size:.78rem;font-weight:700;color:var(--muted);letter-spacing:.06em}
 button,.filebtn{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:12px 16px;font-weight:700;font-size:1rem;width:100%}
@@ -75,11 +76,6 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:3px solid
 .filebtn{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--accent);color:var(--accent);
   border-radius:12px;padding:10px 14px;font-weight:700;background:transparent;position:relative}
 .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
-.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.seg.two{grid-template-columns:repeat(2,1fr)}
-.seg button{border:1.5px solid var(--line);background:var(--soft);border-radius:10px;padding:8px 2px 6px;
-  display:grid;justify-items:center;gap:4px;font-size:.8rem;white-space:nowrap}
-.seg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
 .ico{width:26px;height:26px;border-radius:50%;display:block}
 .ico.blur{background:radial-gradient(circle,#c98b6b 0 30%,transparent 72%)}
 .ico.mosaic{border-radius:4px;background:
@@ -88,17 +84,6 @@ button:focus-visible,.filebtn:focus-within,input:focus-visible{outline:3px solid
 .ico.stamp{font-size:22px;line-height:26px;text-align:center}
 .ico.ellipse{border:2.5px solid currentColor}
 .ico.rect{border:2.5px solid currentColor;border-radius:4px;width:30px;height:24px}
-input[type=range]{width:100%;accent-color:var(--accent)}
-.range-ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:-6px}
-.swatches{display:flex;gap:8px;flex-wrap:wrap}
-.swatches button{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);padding:0}
-.swatches button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--accent)}
-.emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
-.drawn-stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-.emojis button,.drawn-stamps button{font-size:24px;line-height:1;padding:6px 0;border-radius:10px;border:1.5px solid transparent;background:var(--soft)}
-.drawn-stamps button{display:flex;align-items:center;justify-content:center;padding:6px 4px}
-.drawn-stamps img{width:100%;max-width:58px;height:30px;object-fit:contain}
-.emojis button[aria-pressed="true"],.drawn-stamps button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .ghost{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--soft);border-radius:10px;padding:8px 10px;font-size:.88rem}
 .ghost:disabled{opacity:.45;cursor:default}
@@ -115,7 +100,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   .app{grid-template-columns:minmax(0,1fr)}
   h1{font-size:1.45rem}
 }
-@media (prefers-reduced-motion:no-preference){.seg button,.emojis button,.drawn-stamps button,.swatches button{transition:background .15s,border-color .15s}}
+@media (prefers-reduced-motion:no-preference){.quickbar button{transition:background .15s,border-color .15s}}
 </style>
 
 <div class="app">
@@ -151,6 +136,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <div class="qb-opts" id="qb-opts" hidden>
         <button type="button" data-qshape="ellipse" aria-label="丸にする"><span class="ico ellipse"></span></button>
         <button type="button" data-qshape="rect" aria-label="四角にする"><span class="ico rect"></span></button>
+        <span class="qb-sep" id="qb-strength-sep"></span>
+        <label class="qb-strength" id="qb-strength">強さ
+          <input type="range" id="strength" min="1" max="5" step="1" value="3" aria-label="強さ（右ほどしっかり隠れます）">
+        </label>
         <span class="qb-sep" id="qb-colors-sep"></span>
         <div class="qb-colors" id="qb-colors" hidden></div>
       </div>
@@ -167,45 +156,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     </label>
 
     <div class="group">
-      <span class="label">かくし方</span>
-      <div class="seg" id="kinds">
-        <button type="button" data-kind="blur"><span class="ico blur"></span>ぼかし</button>
-        <button type="button" data-kind="mosaic"><span class="ico mosaic"></span>モザイク</button>
-        <button type="button" data-kind="fill"><span class="ico fill"></span>ぬりつぶし</button>
-        <button type="button" data-kind="stamp"><span class="ico stamp">😊</span>スタンプ</button>
-      </div>
-    </div>
-
-    <div class="group" id="g-shape">
-      <span class="label">形</span>
-      <div class="seg two" id="shapes">
-        <button type="button" data-shape="ellipse"><span class="ico ellipse"></span>丸</button>
-        <button type="button" data-shape="rect"><span class="ico rect"></span>四角</button>
-      </div>
-    </div>
-
-    <div class="group" id="g-strength">
-      <label class="label" for="strength">強さ</label>
-      <input type="range" id="strength" min="1" max="5" step="1" value="3">
-      <div class="range-ends"><span>うすく</span><span>しっかり</span></div>
-    </div>
-
-    <div class="group" id="g-color" hidden>
-      <span class="label">色</span>
-      <div class="swatches" id="colors"></div>
-    </div>
-
-    <div class="group" id="g-emoji" hidden>
-      <span class="label">スタンプ</span>
-      <div class="emojis" id="emojis"></div>
-      <div class="drawn-stamps" id="drawn-stamps"></div>
-    </div>
-
-    <div class="group">
       <span class="count" id="count">隠した場所：0か所</span>
-      <div class="row">
-        <button type="button" class="ghost danger" id="del" disabled>選んだ所を消す</button>
-      </div>
       <div class="row">
         <button type="button" class="ghost" id="undo" disabled>元に戻す</button>
         <button type="button" class="ghost" id="clear" disabled>全部はずす</button>
@@ -707,20 +658,8 @@ function endDrag(e) {
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
 
-// ---------- パネル ----------
-const colorsEl = $('#colors'), emojisEl = $('#emojis');
-COLORS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.color = c; b.style.background = c; b.setAttribute('aria-label', '色 ' + COLOR_NAMES[c]); colorsEl.append(b); });
+// ---------- かくし方の切りかえ ----------
 const STAMP_NAMES = { 'sg-black': '黒いサングラス', 'sg-round': '丸いサングラス', 'eyemask': 'お目目ぱっちりのアイマスク', 'eyemask-sleep': '寝ている目のアイマスク', 'eyemask-wink': 'ウインクのアイマスク', 'eyemask-teary': 'ウルウルした目のアイマスク', 'mask-white': '白いマスク', 'mask-blue': '水色のマスク', 'mask-pink': 'ピンクのマスク', 'mask-black': '黒いマスク' };
-EMOJIS.forEach(em => {
-  const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = em; b.textContent = em;
-  emojisEl.append(b);
-});
-DRAWN_ROWS.flat().forEach(key => {
-  const b = document.createElement('button'); b.type = 'button'; b.dataset.emoji = key;
-  const im = new Image(); im.alt = ''; im.src = emojiImage(key).toDataURL();
-  b.append(im); b.setAttribute('aria-label', STAMP_NAMES[key]);
-  $('#drawn-stamps').append(b);
-});
 
 let armed = false;
 function setArmed(v) {
@@ -740,10 +679,6 @@ function change(prop, val) {
   }
   updatePanel(); draw();
 }
-$('#kinds').addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('kind', b.dataset.kind); });
-$('#shapes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('shape', b.dataset.shape); });
-colorsEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('color', b.dataset.color); });
-$('#g-emoji').addEventListener('click', e => { const b = e.target.closest('button'); if (b) change('emoji', b.dataset.emoji); });
 $('#strength').addEventListener('input', e => {
   st.strength = +e.target.value;
   if (sel) { if (!drag) drag = { mode: 'slider', before: snap() }; sel.strength = st.strength; draw(); }
@@ -756,7 +691,6 @@ function removeSel() {
   regions.splice(regions.indexOf(sel), 1); sel = null;
   commit(before); updatePanel(); draw();
 }
-$('#del').addEventListener('click', removeSel);
 $('#undo').addEventListener('click', undo);
 $('#clear').addEventListener('click', () => { const before = snap(); regions = []; sel = null; commit(before); updatePanel(); draw(); });
 function undo() {
@@ -775,17 +709,7 @@ document.addEventListener('keydown', e => {
 });
 
 function updatePanel() {
-  document.querySelectorAll('#kinds button').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === st.kind));
-  document.querySelectorAll('#shapes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.shape === st.shape));
-  colorsEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.color === st.color));
-  $('#g-emoji').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.emoji === st.emoji));
-  $('#strength').value = st.strength;
-  $('#g-shape').hidden = st.kind === 'stamp';
-  $('#g-strength').hidden = !(st.kind === 'blur' || st.kind === 'mosaic');
-  $('#g-color').hidden = st.kind !== 'fill';
-  $('#g-emoji').hidden = st.kind !== 'stamp';
   $('#count').textContent = `隠した場所：${regions.length}か所` + (sel ? '（1つ選択中）' : '');
-  $('#del').disabled = !sel;
   $('#undo').disabled = !history.length;
   $('#clear').disabled = !regions.length;
   placeQuickbar();
@@ -817,6 +741,8 @@ function placeQuickbar() {  // 選んでいないときも出しておき、次�
   $('#qb-opts').hidden = st.kind === 'stamp';  // 丸・四角はぼかし・モザイク・ぬりつぶしで選べる
   qb.querySelectorAll('[data-qshape]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qshape === st.shape));
   qbColors.hidden = $('#qb-colors-sep').hidden = st.kind !== 'fill';
+  $('#qb-strength').hidden = $('#qb-strength-sep').hidden = !(st.kind === 'blur' || st.kind === 'mosaic');
+  $('#strength').value = st.strength;
   qbColors.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qcolor === st.color));
   qb.querySelectorAll('[data-qkind]').forEach(b => b.setAttribute('aria-pressed', b.dataset.qkind === st.kind));
   qbStamps.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.qemoji === st.emoji));
