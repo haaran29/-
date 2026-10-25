@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>きょうの献立</title>
+<meta name="apple-mobile-web-app-title" content="きょうの献立">
+<meta name="theme-color" content="#e8685c">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=1">
+<link rel="manifest" href="manifest.webmanifest?v=1">
+<style>
+/* 献立アプリ（Claudeの中にある本体）へ飛ぶだけの入口 */
+:root{--bg:#fdf1e4;--ink:#4a2f2b;--muted:#7a5d57;--accent:#e8685c;--accent-ink:#fff;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#1f1916;--ink:#f3e7e1;--muted:#c4aea6;--accent:#f08a7f;--accent-ink:#2a120f;color-scheme:dark}}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+img{width:96px;height:96px;border-radius:22px}
+h1{font-size:1.4rem;margin:0}
+p{margin:0;color:var(--muted);font-size:.95rem}
+a.go{display:inline-block;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:700;padding:12px 28px;border-radius:999px}
+a.go:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+</style>
+</head>
+<body>
+<img src="icon-192.png?v=1" alt="">
+<h1>きょうの献立</h1>
+<div id="setup" hidden>
+  <p>この画面をホーム画面に追加すると、<br>お鍋のアイコンから献立アプリが開きます。</p>
+  <p style="margin-top:10px">下の共有ボタン（□に↑）→「ホーム画面に追加」</p>
+  <p style="margin-top:10px;font-size:.85rem">「Webアプリとして開く」が出たら、オフにしてください。</p>
+</div>
+<p id="msg" hidden>献立アプリを開いています…</p>
+<a class="go" id="go" href="https://claude.ai/artifact/Eib6JMYRBSmYzK4gsmJFHs">献立アプリを開く</a>
+<script>
+// 本体はClaudeの中にあるので、そちらへ移動する入口。
+// 初めて開いたときだけは移動せず、ホーム画面に追加する案内を出す。
+var APP="https://claude.ai/artifact/Eib6JMYRBSmYzK4gsmJFHs";
+var seen=false;
+try{seen=localStorage.getItem("kondate-seen")==="1";localStorage.setItem("kondate-seen","1")}catch(e){seen=true}
+if(seen||navigator.standalone){
+  document.getElementById("msg").hidden=false;
+  document.getElementById("go").textContent="開かないときはここをタップ";
+  location.replace(APP);
+}else{
+  document.getElementById("setup").hidden=false;
+}
+</script>
+</body>
+</html>

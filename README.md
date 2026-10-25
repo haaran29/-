@@ -23,3 +23,4 @@
 - [付箋TODO](sticky-notes/)：パソコンの画面にいつも出ている、チェックを入れられる付箋メモ
 - [付箋TODO スマホ版](fusen/)：https://haaran29.github.io/-/fusen/
 - [写真かくし](kakushi/)：写真の顔や名前を、ぼかし・モザイク・スタンプで隠す：https://haaran29.github.io/-/kakushi/
+- [きょうの献立](kondate/)：Claudeの中にある献立アプリを開く入口（ホーム画面のお鍋アイコン用）：https://haaran29.github.io/-/kondate/
