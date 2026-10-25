@@ -36,16 +36,17 @@ a.go:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 <a class="go" id="go" href="https://claude.ai/artifact/Eib6JMYRBSmYzK4gsmJFHs">献立アプリを開く</a>
 <script>
 // 本体はClaudeの中にあるので、そちらへ移動する入口。
-// 初めて開いたときだけは移動せず、ホーム画面に追加する案内を出す。
+// 「?setup」を付けて開いたときだけは移動せず、ホーム画面に追加する案内を出す。
+// そのとき表示上のアドレスを「?setup」なしに書き換えておくので、
+// ホーム画面に追加されるのは「移動する入口」のほうになる。
 var APP="https://claude.ai/artifact/Eib6JMYRBSmYzK4gsmJFHs";
-var seen=false;
-try{seen=localStorage.getItem("kondate-seen")==="1";localStorage.setItem("kondate-seen","1")}catch(e){seen=true}
-if(seen||navigator.standalone){
+if(/[?&]setup/.test(location.search)){
+  try{history.replaceState(null,"",location.pathname)}catch(e){}
+  document.getElementById("setup").hidden=false;
+}else{
   document.getElementById("msg").hidden=false;
   document.getElementById("go").textContent="開かないときはここをタップ";
   location.replace(APP);
-}else{
-  document.getElementById("setup").hidden=false;
 }
 </script>
 </body>
