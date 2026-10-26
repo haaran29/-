@@ -25,3 +25,4 @@
 - [写真かくし](kakushi/)：写真の顔や名前を、ぼかし・モザイク・スタンプで隠す：https://haaran29.github.io/-/kakushi/
 - [きょうの献立](kondate/)：Claudeの中にある献立アプリを開く入口（ホーム画面のお鍋アイコン用）：https://haaran29.github.io/-/kondate/
 - [写真コラージュ台紙](collage/)：Claudeの中にある写真コラージュ台紙を開く入口（ホーム画面のアイコン用）：https://haaran29.github.io/-/collage/
+- [個体識別 日数計算](kotai/)：Claudeの中にある日数計算アプリを開く入口（ホーム画面のアイコン用）：https://haaran29.github.io/-/kotai/
