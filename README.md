@@ -27,3 +27,4 @@
 - [写真コラージュ台紙](collage/)：Claudeの中にある写真コラージュ台紙を開く入口（ホーム画面のアイコン用）：https://haaran29.github.io/-/collage/
 - [個体識別 日数計算](kotai/)：Claudeの中にある日数計算アプリを開く入口（ホーム画面のアイコン用）：https://haaran29.github.io/-/kotai/
 - [ふりかえり手帳](furikaeri/)：Claudeの中にあるふりかえり手帳を開く入口（ホーム画面のアイコン用）：https://haaran29.github.io/-/furikaeri/
+- [記事の本棚](hondana/)：Claudeの中にある記事の本棚を開く入口（ホーム画面のアイコン用）：https://haaran29.github.io/-/hondana/
